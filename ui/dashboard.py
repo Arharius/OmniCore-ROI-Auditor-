@@ -376,6 +376,10 @@ def run_dashboard():
     </style>
     """, unsafe_allow_html=True)
 
+    # ── Demo gate ─────────────────────────────────────────────────────────────────
+    is_demo = st.session_state.get("demo_only", False) and \
+              not st.session_state.get("authenticated", False)
+
     # ── SIDEBAR ───────────────────────────────────────────────────────────────────
     if "lang_select" not in st.session_state:
         st.session_state["lang_select"] = "ru"
@@ -423,9 +427,16 @@ def run_dashboard():
         st.session_state.setdefault("company_name", "Marteco Digital Services")
         company_name = st.text_input(t(lang, "company_label"), key="company_name")
 
-        csv_file = st.file_uploader(
-            t(lang, "csv_label"), type=["csv"], help=t(lang, "csv_help"), key="csv_file"
-        )
+        if is_demo:
+            _lock_csv = {"en": "🔐 Upload your own CSV — available after login",
+                         "ru": "🔐 Загрузка CSV доступна после входа",
+                         "sr": "🔐 Učitavanje CSV dostupno nakon prijave"}
+            st.info(_lock_csv[lang])
+            csv_file = None
+        else:
+            csv_file = st.file_uploader(
+                t(lang, "csv_label"), type=["csv"], help=t(lang, "csv_help"), key="csv_file"
+            )
 
         st.markdown("---")
         st.markdown(t(lang, "labor_section"))
@@ -795,56 +806,77 @@ def run_dashboard():
         passport = roi_eng.passport_text(inp, res)
         st.code(passport, language="")
 
-        dl1, dl2 = st.columns(2)
+        if is_demo:
+            _lock_msg = {
+                "en": ("🔐 Download TXT — available after login",
+                       "🔐 Download PDF — available after login",
+                       "Sign in to export your ROI Passport"),
+                "ru": ("🔐 Скачать TXT — доступно после входа",
+                       "🔐 Скачать PDF — доступно после входа",
+                       "Войдите, чтобы экспортировать ROI-паспорт"),
+                "sr": ("🔐 Preuzmi TXT — dostupno nakon prijave",
+                       "🔐 Preuzmi PDF — dostupno nakon prijave",
+                       "Prijavite se da biste izvezli ROI pasoš"),
+            }
+            dl1, dl2 = st.columns(2)
+            with dl1:
+                st.button(_lock_msg[lang][0], key="dl_txt_lock", disabled=True,
+                          use_container_width=True)
+            with dl2:
+                st.button(_lock_msg[lang][1], key="dl_pdf_lock", disabled=True,
+                          use_container_width=True)
+            st.caption(_lock_msg[lang][2])
+        else:
+            dl1, dl2 = st.columns(2)
 
-        with dl1:
-            st.download_button(
-                label=t(lang, "download_txt"),
-                data=passport.encode("utf-8"),
-                file_name="roi_passport_{}.txt".format(company_name.replace(" ", "_")),
-                mime="text/plain",
-                key="dl_txt",
-            )
-
-        with dl2:
-            try:
-                pdf_bytes = build_roi_passport_pdf(
-                    company_name=company_name,
-                    auditor_name="Andrew | AI Product Advisor",
-                    time_saved=res.time_saved_annual,
-                    error_reduction=res.error_reduction_annual,
-                    revenue_impact=res.revenue_impact_annual,
-                    markov_gain=res.markov_gain_annual,
-                    implementation_cost=float(impl_cost),
-                    manual_hours_before=float(manual_hours),
-                    automation_rate_pct=float(automation_rate),
-                    error_rate_before=float(error_before),
-                    error_rate_after=float(error_after),
-                    deal_cycle_before=float(cycle_before),
-                    deal_cycle_after=float(cycle_after),
-                    p_complete_before_pct=float(p_before),
-                    p_complete_after_pct=float(p_after),
-                    bayes_prior=bayes_res.prior_pct,
-                    bayes_posterior=bayes_res.posterior_pct,
-                    bayes_ci="{}%-{}%".format(bayes_res.ci_80_low, bayes_res.ci_80_high),
-                    bottleneck_node=graph_res.bottleneck_node,
-                    bottleneck_score=graph_res.bottleneck_score,
-                    net_roi=res.net_roi,
-                    roi_pct=res.roi_pct,
-                    payback_months=res.payback_months,
+            with dl1:
+                st.download_button(
+                    label=t(lang, "download_txt"),
+                    data=passport.encode("utf-8"),
+                    file_name="roi_passport_{}.txt".format(company_name.replace(" ", "_")),
+                    mime="text/plain",
+                    key="dl_txt",
                 )
-            except Exception as _pdf_err:
-                st.error("PDF error: {}".format(_pdf_err))
-                import traceback
-                st.code(traceback.format_exc())
-                pdf_bytes = b""
-            st.download_button(
-                label=t(lang, "download_pdf"),
-                data=pdf_bytes,
-                file_name="roi_passport_{}.pdf".format(company_name.replace(" ", "_")),
-                mime="application/pdf",
-                key="dl_pdf",
-            )
+
+            with dl2:
+                try:
+                    pdf_bytes = build_roi_passport_pdf(
+                        company_name=company_name,
+                        auditor_name="Andrew | AI Product Advisor",
+                        time_saved=res.time_saved_annual,
+                        error_reduction=res.error_reduction_annual,
+                        revenue_impact=res.revenue_impact_annual,
+                        markov_gain=res.markov_gain_annual,
+                        implementation_cost=float(impl_cost),
+                        manual_hours_before=float(manual_hours),
+                        automation_rate_pct=float(automation_rate),
+                        error_rate_before=float(error_before),
+                        error_rate_after=float(error_after),
+                        deal_cycle_before=float(cycle_before),
+                        deal_cycle_after=float(cycle_after),
+                        p_complete_before_pct=float(p_before),
+                        p_complete_after_pct=float(p_after),
+                        bayes_prior=bayes_res.prior_pct,
+                        bayes_posterior=bayes_res.posterior_pct,
+                        bayes_ci="{}%-{}%".format(bayes_res.ci_80_low, bayes_res.ci_80_high),
+                        bottleneck_node=graph_res.bottleneck_node,
+                        bottleneck_score=graph_res.bottleneck_score,
+                        net_roi=res.net_roi,
+                        roi_pct=res.roi_pct,
+                        payback_months=res.payback_months,
+                    )
+                except Exception as _pdf_err:
+                    st.error("PDF error: {}".format(_pdf_err))
+                    import traceback
+                    st.code(traceback.format_exc())
+                    pdf_bytes = b""
+                st.download_button(
+                    label=t(lang, "download_pdf"),
+                    data=pdf_bytes,
+                    file_name="roi_passport_{}.pdf".format(company_name.replace(" ", "_")),
+                    mime="application/pdf",
+                    key="dl_pdf",
+                )
 
         linkedin_text = t(lang, "linkedin_text",
                           company=company_name,
