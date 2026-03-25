@@ -54,12 +54,16 @@ CHART_LAYOUT = dict(
 )
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────────────
+if "lang_select" not in st.session_state:
+    st.session_state["lang_select"] = "ru"
+
 with st.sidebar:
-    lang = st.selectbox(
+    lang = st.radio(
         "🌐 Language / Язык / Jezik",
         options=list(LANG_NAMES.keys()),
         format_func=lambda k: LANG_NAMES[k],
-        index=1,
+        horizontal=True,
+        key="lang_select",
     )
 
     st.markdown("## " + t(lang, "sidebar_title"))
@@ -207,7 +211,7 @@ with tab1:
         textposition="outside",
     ))
     fig_wf.update_layout(showlegend=False, height=400, **CHART_LAYOUT)
-    st.plotly_chart(fig_wf, use_container_width=True)
+    st.plotly_chart(fig_wf, width="stretch")
 
     col_p, col_t = st.columns(2)
 
@@ -223,7 +227,7 @@ with tab1:
             textinfo="label+percent",
         ))
         fig_pie.update_layout(height=340, **CHART_LAYOUT)
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width="stretch")
 
     with col_t:
         st.subheader("")
@@ -236,7 +240,7 @@ with tab1:
                                    res.revenue_impact_annual, res.markov_gain_annual,
                                    res.total_benefit, -impl_cost, res.net_roi],
         })
-        st.dataframe(df_bd, use_container_width=True, height=300)
+        st.dataframe(df_bd, height=300)
 
 # ────────────────────────────────────────────────────────────────────
 # TAB 2 — GRAPH
@@ -282,12 +286,12 @@ with tab2:
         xaxis=dict(visible=False), yaxis=dict(visible=False),
         **CHART_LAYOUT,
     )
-    st.plotly_chart(fig_g, use_container_width=True)
+    st.plotly_chart(fig_g, width="stretch")
 
     st.subheader(t(lang, "centrality_table"))
     df_bt = pd.DataFrame(graph_res.all_nodes_ranked,
                          columns=[t(lang, "node_col"), t(lang, "centrality_col")])
-    st.dataframe(df_bt, use_container_width=True)
+    st.dataframe(df_bt, )
 
 # ────────────────────────────────────────────────────────────────────
 # TAB 3 — MARKOV
@@ -304,12 +308,12 @@ with tab3:
 
     st.markdown(t(lang, "matrix_q"))
     df_Q = pd.DataFrame(Q_mat, index=m_states, columns=m_states)
-    st.dataframe(df_Q.style.format("{:.4f}"), use_container_width=True)
+    st.dataframe(df_Q.style.format("{:.4f}"), )
 
     if N_mat is not None:
         st.markdown(t(lang, "matrix_n"))
         df_N = pd.DataFrame(N_mat, index=m_states, columns=m_states)
-        st.dataframe(df_N.style.format("{:.4f}"), use_container_width=True)
+        st.dataframe(df_N.style.format("{:.4f}"), )
 
     st.markdown(t(lang, "timeline_title"))
     months_range  = list(range(0, 13))
@@ -338,7 +342,7 @@ with tab3:
         height=380,
         **CHART_LAYOUT,
     )
-    st.plotly_chart(fig_tl, use_container_width=True)
+    st.plotly_chart(fig_tl, width="stretch")
 
 # ────────────────────────────────────────────────────────────────────
 # TAB 4 — BAYES
@@ -388,7 +392,7 @@ with tab4:
         height=380,
         **CHART_LAYOUT,
     )
-    st.plotly_chart(fig_b, use_container_width=True)
+    st.plotly_chart(fig_b, width="stretch")
 
     risk = math_eng.bayesian_contextual_risk(0.05, 0.80, 0.20)
     st.info(t(lang, "contextual_risk", risk=risk))
@@ -410,39 +414,47 @@ with tab5:
             data=passport.encode("utf-8"),
             file_name="roi_passport_{}.txt".format(company_name.replace(" ", "_")),
             mime="text/plain",
+            key="dl_txt",
         )
 
     with dl2:
-        pdf_bytes = build_roi_passport_pdf(
-            company_name=company_name,
-            auditor_name="Andrew | AI Product Advisor",
-            time_saved=res.time_saved_annual,
-            error_reduction=res.error_reduction_annual,
-            revenue_impact=res.revenue_impact_annual,
-            markov_gain=res.markov_gain_annual,
-            implementation_cost=float(impl_cost),
-            manual_hours_before=float(manual_hours),
-            automation_rate_pct=float(automation_rate),
-            error_rate_before=float(error_before),
-            error_rate_after=float(error_after),
-            deal_cycle_before=float(cycle_before),
-            deal_cycle_after=float(cycle_after),
-            p_complete_before_pct=float(p_before),
-            p_complete_after_pct=float(p_after),
-            bayes_prior=bayes_res.prior_pct,
-            bayes_posterior=bayes_res.posterior_pct,
-            bayes_ci="{}%-{}%".format(bayes_res.ci_80_low, bayes_res.ci_80_high),
-            bottleneck_node=graph_res.bottleneck_node,
-            bottleneck_score=graph_res.bottleneck_score,
-            net_roi=res.net_roi,
-            roi_pct=res.roi_pct,
-            payback_months=res.payback_months,
-        )
+        try:
+            pdf_bytes = build_roi_passport_pdf(
+                company_name=company_name,
+                auditor_name="Andrew | AI Product Advisor",
+                time_saved=res.time_saved_annual,
+                error_reduction=res.error_reduction_annual,
+                revenue_impact=res.revenue_impact_annual,
+                markov_gain=res.markov_gain_annual,
+                implementation_cost=float(impl_cost),
+                manual_hours_before=float(manual_hours),
+                automation_rate_pct=float(automation_rate),
+                error_rate_before=float(error_before),
+                error_rate_after=float(error_after),
+                deal_cycle_before=float(cycle_before),
+                deal_cycle_after=float(cycle_after),
+                p_complete_before_pct=float(p_before),
+                p_complete_after_pct=float(p_after),
+                bayes_prior=bayes_res.prior_pct,
+                bayes_posterior=bayes_res.posterior_pct,
+                bayes_ci="{}%-{}%".format(bayes_res.ci_80_low, bayes_res.ci_80_high),
+                bottleneck_node=graph_res.bottleneck_node,
+                bottleneck_score=graph_res.bottleneck_score,
+                net_roi=res.net_roi,
+                roi_pct=res.roi_pct,
+                payback_months=res.payback_months,
+            )
+        except Exception as _pdf_err:
+            st.error("PDF error: {}".format(_pdf_err))
+            import traceback
+            st.code(traceback.format_exc())
+            pdf_bytes = b""
         st.download_button(
             label=t(lang, "download_pdf"),
             data=pdf_bytes,
             file_name="roi_passport_{}.pdf".format(company_name.replace(" ", "_")),
             mime="application/pdf",
+            key="dl_pdf",
         )
 
     linkedin_text = t(lang, "linkedin_text",
@@ -450,4 +462,4 @@ with tab5:
                       roi=res.net_roi,
                       roi_pct=res.roi_pct,
                       payback=res.payback_months)
-    st.text_area(t(lang, "linkedin_label"), value=linkedin_text, height=110)
+    st.text_area(t(lang, "linkedin_label"), value=linkedin_text, height=110, key="linkedin_ta")
