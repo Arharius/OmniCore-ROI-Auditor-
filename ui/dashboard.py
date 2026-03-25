@@ -24,265 +24,271 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ─── Reset & Base ─────────────────────────────── */
+/* ─── System font stack — uses SF Pro on Apple devices ── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, [class*="css"] {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+                 'Inter', 'Helvetica Neue', Arial, sans-serif !important;
     -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
 }
 
-/* ─── App Shell ────────────────────────────────── */
-.stApp { background: #F6F3EE !important; }
+/* ─── App Shell — apple.com #F5F5F7 ─────────────── */
+.stApp { background: #F5F5F7 !important; }
 
-/* thin navy rule across the very top */
-.stApp::before {
-    content: "";
-    position: fixed; top: 0; left: 0; right: 0; height: 2px;
-    background: #0F1F4E;
-    z-index: 9999;
-}
-
-/* ─── Sidebar ──────────────────────────────────── */
+/* ─── Sidebar — pure white, zero decoration ─────── */
 [data-testid="stSidebar"] {
     background: #FFFFFF !important;
-    border-right: 1px solid #E8E4DC !important;
+    border-right: 1px solid rgba(0,0,0,0.08) !important;
     box-shadow: none !important;
 }
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] .stCaption {
-    color: #6B7280 !important;
-    font-size: 12px !important;
-    line-height: 1.6 !important;
+    color: #6E6E73 !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
 }
 [data-testid="stSidebar"] h2 {
-    color: #0F1F4E !important;
-    font-size: 11px !important;
+    color: #1D1D1F !important;
+    font-size: 17px !important;
     font-weight: 600 !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-    margin-bottom: 12px !important;
+    letter-spacing: -0.02em !important;
+    text-transform: none !important;
 }
 
-/* ─── KPI Cards ────────────────────────────────── */
+/* ─── KPI Cards — white, big radius, whisper shadow ─ */
 [data-testid="metric-container"] {
     background: #FFFFFF !important;
-    border: 1px solid #E8E4DC !important;
-    border-radius: 10px !important;
-    padding: 20px 22px !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05) !important;
-    transition: box-shadow 0.2s ease, transform 0.2s ease !important;
+    border-radius: 18px !important;
+    padding: 24px 26px !important;
+    border: none !important;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08) !important;
+    transition: box-shadow 0.3s ease, transform 0.3s ease !important;
 }
 [data-testid="metric-container"]:hover {
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 12px 32px rgba(15,31,78,0.10) !important;
-    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.13) !important;
+    transform: scale(1.015) !important;
 }
 [data-testid="stMetricLabel"] > div {
-    color: #9CA3AF !important;
-    font-size: 11px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.04em !important;
+    color: #6E6E73 !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
     text-transform: none !important;
 }
 [data-testid="stMetricValue"] > div {
-    color: #00875A !important;
-    font-size: 30px !important;
+    color: #34C759 !important;
+    font-size: 32px !important;
     font-weight: 700 !important;
     letter-spacing: -0.04em !important;
-    line-height: 1.1 !important;
+    line-height: 1.05 !important;
 }
-[data-testid="stMetricDelta"] > div { font-size: 12px !important; font-weight: 500 !important; }
+[data-testid="stMetricDelta"] > div {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+}
 
-/* ─── Tabs ─────────────────────────────────────── */
+/* ─── Tabs — SF-style segmented feel ────────────── */
 .stTabs [data-baseweb="tab-list"] {
     background: transparent !important;
-    border-bottom: 1px solid #E8E4DC !important;
+    border-bottom: 1px solid rgba(0,0,0,0.10) !important;
     gap: 0 !important;
-    padding-bottom: 0 !important;
 }
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
-    color: #9CA3AF !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0 !important;
+    color: #6E6E73 !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
+    letter-spacing: -0.01em !important;
     text-transform: none !important;
     border: none !important;
     border-radius: 0 !important;
-    padding: 12px 20px !important;
-    transition: color 0.15s !important;
+    padding: 12px 22px !important;
+    transition: color 0.2s !important;
 }
-.stTabs [data-baseweb="tab"]:hover { color: #374151 !important; }
+.stTabs [data-baseweb="tab"]:hover { color: #1D1D1F !important; }
 .stTabs [aria-selected="true"] {
-    color: #0F1F4E !important;
-    font-weight: 600 !important;
-    border-bottom: 2px solid #0F1F4E !important;
+    color: #0071E3 !important;
+    font-weight: 500 !important;
+    border-bottom: 2px solid #0071E3 !important;
     background: transparent !important;
 }
 
-/* ─── Typography ───────────────────────────────── */
+/* ─── Typography — SF Pro scale ─────────────────── */
 [data-testid="stMarkdownContainer"] h1 {
-    font-size: 22px !important;
+    font-size: 28px !important;
     font-weight: 700 !important;
-    color: #111827 !important;
-    letter-spacing: -0.025em !important;
-    line-height: 1.25 !important;
+    color: #1D1D1F !important;
+    letter-spacing: -0.035em !important;
+    line-height: 1.15 !important;
 }
 [data-testid="stMarkdownContainer"] h2,
 [data-testid="stMarkdownContainer"] h3 {
-    font-size: 11px !important;
+    font-size: 13px !important;
     font-weight: 600 !important;
-    color: #9CA3AF !important;
-    letter-spacing: 0.07em !important;
-    text-transform: uppercase !important;
+    color: #6E6E73 !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
 }
-[data-testid="stMarkdownContainer"] p { color: #374151 !important; font-size: 13px !important; }
+[data-testid="stMarkdownContainer"] p {
+    color: #1D1D1F !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+}
 [data-testid="stHeadingWithActionElements"] h2,
 [data-testid="stHeadingWithActionElements"] h3 {
-    color: #9CA3AF !important;
-    font-size: 11px !important;
+    color: #6E6E73 !important;
+    font-size: 13px !important;
     font-weight: 600 !important;
-    letter-spacing: 0.07em !important;
-    text-transform: uppercase !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
 }
 
-/* ─── Buttons ──────────────────────────────────── */
+/* ─── Buttons — Apple pill style ────────────────── */
 div.stDownloadButton > button,
 div.stButton > button {
-    background: #0F1F4E !important;
+    background: #0071E3 !important;
     color: #FFFFFF !important;
     border: none !important;
-    border-radius: 7px !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    letter-spacing: 0 !important;
-    padding: 9px 20px !important;
-    width: 100% !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.18) !important;
-    transition: background 0.15s ease, box-shadow 0.15s ease !important;
+    border-radius: 980px !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
+    letter-spacing: -0.01em !important;
+    padding: 10px 22px !important;
+    width: auto !important;
+    min-width: 120px !important;
+    box-shadow: none !important;
+    transition: background 0.2s ease, opacity 0.2s ease !important;
 }
 div.stDownloadButton > button:hover,
 div.stButton > button:hover {
-    background: #1a3271 !important;
-    box-shadow: 0 2px 8px rgba(15,31,78,0.28) !important;
+    background: #0077ED !important;
+    opacity: 0.92 !important;
 }
 
-/* ─── Inputs & Selects ─────────────────────────── */
+/* ─── Radio & labels ─────────────────────────────── */
 div[data-testid="stRadio"] > label {
-    color: #6B7280 !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    color: #6E6E73 !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
 }
 div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
-    color: #111827 !important;
-    font-size: 13px !important;
+    color: #1D1D1F !important;
+    font-size: 15px !important;
     font-weight: 400 !important;
     text-transform: none !important;
 }
-[data-testid="stSlider"] [data-testid="stTickBarMin"],
-[data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #D1D5DB !important; }
-[data-testid="stSlider"] > div > div > div > div { background: #0F1F4E !important; }
 
-/* ─── Number inputs ────────────────────────────── */
+/* ─── Sliders — Apple blue thumb ────────────────── */
+[data-testid="stSlider"] [data-testid="stTickBarMin"],
+[data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #AEAEB2 !important; }
+[data-testid="stSlider"] > div > div > div > div { background: #0071E3 !important; }
+
+/* ─── Inputs ─────────────────────────────────────── */
 [data-testid="stNumberInput"] input,
 [data-testid="stTextInput"] input {
-    border: 1px solid #E5E7EB !important;
-    border-radius: 7px !important;
-    font-size: 13px !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
     background: #FFFFFF !important;
-    color: #111827 !important;
+    color: #1D1D1F !important;
+    padding: 8px 12px !important;
 }
 [data-testid="stNumberInput"] input:focus,
 [data-testid="stTextInput"] input:focus {
-    border-color: #0F1F4E !important;
-    box-shadow: 0 0 0 3px rgba(15,31,78,0.08) !important;
+    border-color: #0071E3 !important;
+    box-shadow: 0 0 0 3px rgba(0,113,227,0.15) !important;
+    outline: none !important;
 }
 
-/* ─── Data Tables ──────────────────────────────── */
+/* ─── Data Tables ────────────────────────────────── */
 [data-testid="stDataFrame"] {
     background: #FFFFFF !important;
-    border: 1px solid #E8E4DC !important;
-    border-radius: 10px !important;
+    border: none !important;
+    border-radius: 16px !important;
     overflow: hidden !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08) !important;
 }
 [data-testid="stDataFrame"] th {
-    background: #F9F8F5 !important;
-    color: #9CA3AF !important;
-    font-size: 10px !important;
+    background: #F5F5F7 !important;
+    color: #6E6E73 !important;
+    font-size: 11px !important;
     font-weight: 600 !important;
-    letter-spacing: 0.08em !important;
+    letter-spacing: 0.04em !important;
     text-transform: uppercase !important;
-    border-bottom: 1px solid #E8E4DC !important;
+    border-bottom: 1px solid rgba(0,0,0,0.06) !important;
 }
 [data-testid="stDataFrame"] td {
-    color: #374151 !important;
-    font-size: 13px !important;
-    border-bottom: 1px solid #F3F0EB !important;
+    color: #1D1D1F !important;
+    font-size: 14px !important;
+    border-bottom: 1px solid rgba(0,0,0,0.04) !important;
 }
 
-/* ─── Code / Passport ──────────────────────────── */
+/* ─── Code blocks ────────────────────────────────── */
 [data-testid="stCode"] {
-    background: #F9F8F5 !important;
-    border: 1px solid #E8E4DC !important;
-    border-radius: 8px !important;
+    background: #F5F5F7 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
 }
 [data-testid="stCode"] code {
-    color: #0F1F4E !important;
-    font-size: 12px !important;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    color: #1D1D1F !important;
+    font-size: 13px !important;
+    font-family: 'SF Mono', 'Fira Code', monospace !important;
 }
 
-/* ─── Info / Alert boxes ───────────────────────── */
+/* ─── Alerts ─────────────────────────────────────── */
 [data-testid="stAlert"] {
-    background: #EFF6FF !important;
-    border: 1px solid #DBEAFE !important;
-    border-left: 3px solid #0F1F4E !important;
-    border-radius: 8px !important;
-    color: #1e3a5f !important;
+    background: rgba(0,113,227,0.06) !important;
+    border: 1px solid rgba(0,113,227,0.18) !important;
+    border-radius: 12px !important;
+    color: #0055B3 !important;
 }
-[data-testid="stAlert"] p { color: #1e3a5f !important; font-size: 13px !important; }
+[data-testid="stAlert"] p { color: #0055B3 !important; font-size: 14px !important; }
 
-/* ─── Dividers ─────────────────────────────────── */
-hr { border: none !important; border-top: 1px solid #E8E4DC !important; }
+/* ─── Dividers ───────────────────────────────────── */
+hr { border: none !important; border-top: 1px solid rgba(0,0,0,0.08) !important; }
 
-/* ─── Expanders ────────────────────────────────── */
+/* ─── Expanders ──────────────────────────────────── */
 [data-testid="stExpander"] {
-    border: 1px solid #E8E4DC !important;
-    border-radius: 8px !important;
+    border: none !important;
+    border-radius: 16px !important;
     background: #FFFFFF !important;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07) !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Chart colour palette (light institutional) ─────────────────────────────
+# ── Chart colour palette (Apple HIG) ──────────────────────────────────────
 _C = dict(
-    navy="#1a3271", green="#009a5c", gold="#c0a062",
-    red="#c0392b",  purple="#6c5ce7", amber="#d4860a",
-    blue="#2563eb", teal="#0d9488",
+    navy="#0071E3", green="#34C759", gold="#FF9F0A",
+    red="#FF3B30",  purple="#AF52DE", amber="#FF9F0A",
+    blue="#0071E3", teal="#5AC8FA",
 )
 CHART_LAYOUT = dict(
     plot_bgcolor="rgba(255,255,255,0)",
     paper_bgcolor="rgba(255,255,255,0)",
-    font=dict(family="Inter, sans-serif", color="#9aa3b8", size=11),
+    font=dict(family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif",
+              color="#6E6E73", size=12),
     margin=dict(l=10, r=10, t=36, b=10),
     xaxis=dict(
         gridcolor="rgba(0,0,0,0.05)", gridwidth=1,
-        linecolor="rgba(0,0,0,0.08)", zeroline=False,
-        tickfont=dict(color="#b0b8cc", size=10),
+        linecolor="rgba(0,0,0,0.06)", zeroline=False,
+        tickfont=dict(color="#AEAEB2", size=11),
     ),
     yaxis=dict(
         gridcolor="rgba(0,0,0,0.05)", gridwidth=1,
-        linecolor="rgba(0,0,0,0.08)", zeroline=False,
-        tickfont=dict(color="#b0b8cc", size=10),
+        linecolor="rgba(0,0,0,0.06)", zeroline=False,
+        tickfont=dict(color="#AEAEB2", size=11),
     ),
     legend=dict(
-        bgcolor="rgba(255,255,255,0.8)",
-        font=dict(color="#7a8499", size=10),
+        bgcolor="rgba(255,255,255,0.85)",
+        font=dict(color="#6E6E73", size=11),
         bordercolor="rgba(0,0,0,0.06)", borderwidth=1,
     ),
 )
@@ -400,19 +406,15 @@ except Exception:
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">'
-    '<span style="font-size:24px;font-weight:800;color:#1a2744;letter-spacing:-0.03em;">'
+    '<div style="margin-bottom:4px;">'
+    '<span style="font-size:28px;font-weight:700;color:#1D1D1F;letter-spacing:-0.035em;'
+    'font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
     + t(lang, "app_title") +
     '</span>'
-    '<span style="font-size:10px;font-weight:700;color:#ffffff;letter-spacing:0.12em;'
-    'text-transform:uppercase;background:#1a3271;border-radius:4px;padding:3px 8px;">'
-    'INSTITUTIONAL</span>'
     '</div>'
-    '<div style="font-size:12px;color:#9aa3b8;font-weight:500;letter-spacing:0.03em;margin-bottom:20px;">'
-    '<span style="color:#c0a062;font-size:10px;">◆</span>&nbsp;&nbsp;'
-    '<span style="color:#1a2744;font-weight:600;">' + company_name + '</span>'
-    '&nbsp;&nbsp;<span style="color:#dde0e8;">|</span>&nbsp;&nbsp;'
-    + t(lang, "app_subtitle") +
+    '<div style="font-size:15px;color:#6E6E73;font-weight:400;letter-spacing:-0.01em;'
+    'margin-bottom:24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
+    + company_name + '&ensp;·&ensp;' + t(lang, "app_subtitle") +
     '</div>',
     unsafe_allow_html=True,
 )
