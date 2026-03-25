@@ -39,6 +39,8 @@ class MatrixExtractor:
         has_error_map: dict,
         deal_values: dict,
         cycle_days: list,
+        error_rows: int = 0,
+        total_rows: int = 0,
     ) -> ProcessLog:
         """
         Строит ProcessLog из извлечённых последовательностей переходов.
@@ -106,8 +108,11 @@ class MatrixExtractor:
         }
 
         total_deals = len(sequences)
-        error_count = sum(1 for v in has_error_map.values() if v)
-        error_rate = error_count / total_deals if total_deals > 0 else 0.0
+        if total_rows > 0:
+            error_rate = error_rows / total_rows
+        else:
+            error_count = sum(1 for v in has_error_map.values() if v)
+            error_rate = error_count / total_deals if total_deals > 0 else 0.0
 
         avg_cycle_days = float(np.mean(cycle_days)) if cycle_days else 0.0
 
@@ -152,6 +157,8 @@ class MatrixExtractor:
             has_error_map = {}
             deal_values = {}
             cycle_days = []
+            total_rows = 0
+            error_rows = 0
 
             for deal_id, group in df.groupby("Deal_ID"):
                 statuses = group["Status"].tolist()
@@ -160,7 +167,10 @@ class MatrixExtractor:
                 timestamps[deal_id] = times
 
                 errors = group["Has_Error"].astype(str).str.lower()
-                has_error_map[deal_id] = any(e in ("true", "1", "yes") for e in errors)
+                error_flags = [e in ("true", "1", "yes") for e in errors]
+                has_error_map[deal_id] = any(error_flags)
+                total_rows += len(error_flags)
+                error_rows += sum(error_flags)
 
                 vals = group["Deal_Value"].dropna()
                 deal_values[deal_id] = float(vals.mean()) if not vals.empty else None
@@ -170,7 +180,8 @@ class MatrixExtractor:
                     cycle_days.append(max(delta, 0))
 
             return self._build_process_log(
-                sequences, timestamps, has_error_map, deal_values, cycle_days
+                sequences, timestamps, has_error_map, deal_values, cycle_days,
+                error_rows=error_rows, total_rows=total_rows,
             )
 
         except Exception as e:
@@ -214,6 +225,8 @@ class MatrixExtractor:
             has_error_map = {}
             deal_values = {}
             cycle_days = []
+            total_rows = 0
+            error_rows = 0
 
             for deal_id, group in df.groupby("Deal_ID"):
                 statuses = group["Status"].tolist()
@@ -222,7 +235,10 @@ class MatrixExtractor:
                 timestamps[deal_id] = times
 
                 errors = group["Has_Error"].astype(str).str.lower()
-                has_error_map[deal_id] = any(e in ("true", "1", "yes") for e in errors)
+                error_flags = [e in ("true", "1", "yes") for e in errors]
+                has_error_map[deal_id] = any(error_flags)
+                total_rows += len(error_flags)
+                error_rows += sum(error_flags)
 
                 vals = group["Deal_Value"].dropna()
                 deal_values[deal_id] = float(vals.mean()) if not vals.empty else None
@@ -232,7 +248,8 @@ class MatrixExtractor:
                     cycle_days.append(max(delta, 0))
 
             return self._build_process_log(
-                sequences, timestamps, has_error_map, deal_values, cycle_days
+                sequences, timestamps, has_error_map, deal_values, cycle_days,
+                error_rows=error_rows, total_rows=total_rows,
             )
 
         except Exception as e:
