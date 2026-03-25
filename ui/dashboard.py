@@ -24,25 +24,77 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+/* ── Full dark theme via CSS (no Streamlit theme config needed) ── */
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"],
+.main, .block-container {
+    background-color: #0e1117 !important;
+    color: #e0e0e0 !important;
+}
+[data-testid="stSidebar"] {
+    background-color: #1e2130 !important;
+}
+[data-testid="stSidebar"] * { color: #e0e0e0 !important; }
+
+/* Inputs, sliders, selectboxes */
+[data-testid="stTextInput"] input,
+[data-testid="stSelectbox"] select,
+.stSelectbox div[data-baseweb="select"] {
+    background-color: #1e2130 !important;
+    color: #e0e0e0 !important;
+    border-color: #636EFA44 !important;
+}
+
+/* Metric cards */
 [data-testid="metric-container"] {
-    background: #1e2130;
+    background: #1e2130 !important;
     border-radius: 10px;
     padding: 16px 20px;
     border: 1px solid rgba(99,110,250,0.35);
     margin-bottom: 4px;
 }
+[data-testid="stMetricLabel"] > div { color: #aaaacc !important; font-size: 13px; }
 [data-testid="stMetricValue"] > div {
     color: #00CC96 !important;
     font-size: 26px !important;
     font-weight: 700;
 }
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] { background: #1e2130 !important; }
+.stTabs [data-baseweb="tab"] {
+    background: #1e2130 !important;
+    color: #cccccc !important;
+    border-radius: 6px 6px 0 0;
+    padding: 8px 18px;
+    font-weight: 500;
+}
+.stTabs [aria-selected="true"] {
+    background: #636EFA !important;
+    color: white !important;
+}
+
+/* Buttons */
 div.stDownloadButton > button, div.stButton > button {
-    background: linear-gradient(90deg, #636EFA, #00CC96);
-    color: white; border: none; border-radius: 8px;
-    font-weight: 600; padding: 10px 24px;
-    width: 100%;
+    background: linear-gradient(90deg, #636EFA, #00CC96) !important;
+    color: white !important; border: none !important;
+    border-radius: 8px; font-weight: 600; padding: 10px 24px; width: 100%;
 }
 div.stDownloadButton > button:hover, div.stButton > button:hover { opacity: 0.85; }
+
+/* Text */
+h1, h2, h3, h4 { color: #ffffff !important; }
+p, li, label, .stMarkdown { color: #dddddd !important; }
+
+/* DataFrames */
+[data-testid="stDataFrame"] { background: #1e2130 !important; }
+[data-testid="stDataFrame"] th { background: #0e1117 !important; color: #cccccc !important; }
+[data-testid="stDataFrame"] td { background: #1e2130 !important; color: #e0e0e0 !important; }
+
+/* Info / alerts */
+[data-testid="stInfo"] { background: #1e2130 !important; border-color: #636EFA44 !important; color: #cccccc !important; }
+
+/* Code blocks */
+[data-testid="stCode"] { background: #1e2130 !important; }
 </style>
 """, unsafe_allow_html=True)
 
