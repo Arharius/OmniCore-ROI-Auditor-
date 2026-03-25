@@ -1,0 +1,30 @@
+Create file core/roi_engine.py.
+
+Dataclass ROIInput fields (all typed):
+company_name: str, manual_hours_per_month: float, automation_rate: float,
+hour_rate_eur: float, error_rate_before_pct: float, error_rate_after_pct: float,
+cost_per_error_eur: float, monthly_volume: int, deal_cycle_before_days: float,
+deal_cycle_after_days: float, deals_per_month: int, avg_deal_value_eur: float,
+p_complete_before: float, p_complete_after: float, implementation_cost_eur: float,
+positive_signals: int = 4, total_signals: int = 5
+
+Dataclass ROIResult fields:
+time_saved_annual, error_reduction_annual, revenue_impact_annual, markov_gain_annual,
+total_benefit, net_roi, roi_pct, payback_months: all float
+bayesian_prior_pct, bayesian_posterior_pct: float, bayesian_ci: str
+
+Class ROIEngine, method calculate(self, inp: ROIInput, bayes_result=None) -> ROIResult:
+Use EXACTLY these formulas:
+  time_saved = inp.manual_hours_per_month * inp.automation_rate * 12 * inp.hour_rate_eur
+  error_saved = ((inp.error_rate_before_pct - inp.error_rate_after_pct)/100) * inp.monthly_volume * 12 * inp.cost_per_error_eur
+  velocity = (inp.deal_cycle_before_days - inp.deal_cycle_after_days) / inp.deal_cycle_before_days
+  revenue_impact = inp.deals_per_month * velocity * 0.30 * 12 * inp.avg_deal_value_eur
+  markov_gain = inp.deals_per_month * ((1-inp.p_complete_before) - (1-inp.p_complete_after)) * inp.avg_deal_value_eur * 12
+  total = time_saved + error_saved + revenue_impact + markov_gain
+  net_roi = total - inp.implementation_cost_eur
+  roi_pct = (net_roi / inp.implementation_cost_eur) * 100
+  payback = inp.implementation_cost_eur / (total / 12)
+
+Method passport_text(self, inp, res) -> str: ASCII ROI passport with company, date, 4 metrics with [ГРАФ][МАРКОВ][БАЙЕС] labels, net ROI, "Следующий шаг", auditor signature.
+
+Test with Marteco Digital data at bottom: manual_hours=320, automation_rate=0.86, hour_rate=12, error_before=8.5, error_after=1.2, cost_error=95, volume=600, cycle_before=21, cycle_after=9, deals=25, deal_value=650, p_before=0.74, p_after=0.96, impl_cost=14000
