@@ -27,16 +27,6 @@ DEMO_PRESETS = {
             "ru": "3PL-оператор Москва — 14 менеджеров, 520 ручных ч/мес, ср. контракт 12 000 €",
             "sr": "3PL operator Moskva — 14 menadžera, 520 ručnih h/mes., ugovor 12 000 €",
         },
-        "story": {
-            "ru": (
-                "**ТрансЛогик МСК** — 3PL-оператор, 180 корпоративных клиентов. "
-                "14 менеджеров по продажам вручную переносили заявки из почты в Excel, "
-                "затем в 1С, согласовывали тарифы по email и выставляли счета в PDF. "
-                "18 дней от заявки до подписанного договора — клиенты уходили к конкурентам. "
-                "После внедрения CRM-автоматизации + AI-квалификации: цикл 5 дней, "
-                "ошибки в документах снизились с 14% до 1.8%. **ROI: 847%, окупаемость 2.1 мес.**"
-            ),
-        },
         "company_name": "ТрансЛогик МСК",
         "manual_hours": 520, "automation_rate": 75, "hour_rate": 15,
         "error_before": 14.0, "error_after": 1.8, "cost_per_error": 220, "volume": 1400,
@@ -49,17 +39,6 @@ DEMO_PRESETS = {
             "en": "Performance agency Moscow — 18 clients, 320 manual hrs/mo reporting, avg account 8 500 €",
             "ru": "Performance-агентство Москва — 18 клиентов, 320 ч/мес на отчёты, ср. аккаунт 8 500 €",
             "sr": "Performance agencija Moskva — 18 klijenata, 320 h/mes. izveštaji, prosečan nalog 8 500 €",
-        },
-        "story": {
-            "ru": (
-                "**MOKO Digital** — performance-агентство, Москва, 30 сотрудников. "
-                "Каждый менеджер тратил 5 ч/нед на ручной сбор цифр из FB Ads, Google Ads, "
-                "myTarget и VK в один Excel-отчёт для клиента. Итого: 320 ч/мес = 8 000 € зарплаты "
-                "просто на копирование данных. 8.5% отчётов содержали ошибки — клиенты фиксировали "
-                "расхождения и запрашивали скидки. После подключения BI-коннекторов и "
-                "авто-рассылки к утру понедельника: цикл отчёта 0.3 дня, ошибки 0.9%. "
-                "**ROI: 1 240%, окупаемость 0.9 мес.**"
-            ),
         },
         "company_name": "MOKO Digital",
         "manual_hours": 320, "automation_rate": 85, "hour_rate": 25,
@@ -74,49 +53,11 @@ DEMO_PRESETS = {
             "ru": "Сеть магазинов Белград — 12 точек, 380 ч/мес, 2 200 накладных",
             "sr": "Maloprodajni lanac Beograd — 12 prodavnica, 380 h/mes., 2 200 faktura",
         },
-        "story": {
-            "ru": (
-                "**МегаМаркет d.o.o.** — сеть 12 магазинов в Белграде и Нови-Саде. "
-                "Закупочный отдел из 4 человек вручную сводил заявки магазинов в Google Sheets, "
-                "отправлял заказы поставщикам по email и вручную разносил 2 200 входящих накладных "
-                "в Pantheon ERP. Ошибки в 9.2% накладных приводили к пересортице и возвратам. "
-                "Цикл заказа — 8 дней: магазины держали завышенный страховой запас (+35% к норме). "
-                "После EDI-интеграции с 6 ключевыми поставщиками и авто-импорта в ERP: "
-                "цикл 3 дня, ошибки 1.5%, страховой запас снизился. "
-                "**ROI: 612%, окупаемость 2.8 мес.**"
-            ),
-        },
         "company_name": "МегаМаркет d.o.o.",
         "manual_hours": 380, "automation_rate": 68, "hour_rate": 10,
         "error_before": 9.2, "error_after": 1.5, "cost_per_error": 95, "volume": 2000,
         "cycle_before": 8, "cycle_after": 3, "deals_month": 45, "deal_value": 1800,
         "p_before": 72, "p_after": 93, "impl_cost": 19000,
-    },
-    "zarya": {
-        "labels": {"en": "🏛️ FSUE Zarya", "ru": "🏛️ ФГУП НТЦ Заря", "sr": "🏛️ FSUE Zarya"},
-        "desc": {
-            "en": "FSUE NTC Zarya — 6 staff, 290 manual hrs/mo, 180 technical documents",
-            "ru": "ФГУП НТЦ Заря — 6 сотрудников, 290 ч/мес, 180 тех. документов",
-            "sr": "FSUE NTC Zarya — 6 zaposlenih, 290 ručnih h/mes., 180 tehničkih dokumenata",
-        },
-        "story": {
-            "ru": (
-                "**ФГУП НТЦ Заря** — федеральное научно-техническое предприятие. "
-                "Отдел документооборота из 6 сотрудников вручную готовил акты приёмки НИОКР, "
-                "технические отчёты, сметы и документы по 44-ФЗ. Каждый документ проходил "
-                "5–7 итераций согласования: подразделение → юрист → бухгалтерия → руководство → "
-                "заказчик. Средний цикл контракта — 35 дней. 11% документов возвращались "
-                "на доработку из-за ошибок в реквизитах или несоответствия ГОСТ. "
-                "Одна ошибка в гос. документе = повторный цикл согласования (2–3 недели). "
-                "После внедрения СЭД с маршрутами согласования и авто-проверкой по ГОСТ: "
-                "цикл 14 дней, возвраты 1.5%. **ROI: 523%, окупаемость 3.4 мес.**"
-            ),
-        },
-        "company_name": "ФГУП НТЦ Заря",
-        "manual_hours": 290, "automation_rate": 65, "hour_rate": 18,
-        "error_before": 11.0, "error_after": 1.5, "cost_per_error": 400, "volume": 180,
-        "cycle_before": 35, "cycle_after": 14, "deals_month": 8, "deal_value": 5000,
-        "p_before": 58, "p_after": 82, "impl_cost": 22000,
     },
 }
 _DEMO_KEYS = ["manual_hours", "automation_rate", "hour_rate",
@@ -441,20 +382,16 @@ def run_dashboard():
             unsafe_allow_html=True,
         )
         _active = st.session_state.get("demo_preset")
-        _r1c1, _r1c2 = st.columns(2)
-        _r2c1, _r2c2 = st.columns(2)
-        if _r1c1.button(DEMO_PRESETS["logistics"]["labels"][lang],
-                        key="btn_logistics", use_container_width=True):
+        _dc1, _dc2, _dc3 = st.columns(3)
+        if _dc1.button(DEMO_PRESETS["logistics"]["labels"][lang],
+                       key="btn_logistics", use_container_width=True):
             _apply_preset("logistics"); st.rerun()
-        if _r1c2.button(DEMO_PRESETS["agency"]["labels"][lang],
-                        key="btn_agency", use_container_width=True):
+        if _dc2.button(DEMO_PRESETS["agency"]["labels"][lang],
+                       key="btn_agency", use_container_width=True):
             _apply_preset("agency"); st.rerun()
-        if _r2c1.button(DEMO_PRESETS["retail"]["labels"][lang],
-                        key="btn_retail", use_container_width=True):
+        if _dc3.button(DEMO_PRESETS["retail"]["labels"][lang],
+                       key="btn_retail", use_container_width=True):
             _apply_preset("retail"); st.rerun()
-        if _r2c2.button(DEMO_PRESETS["zarya"]["labels"][lang],
-                        key="btn_zarya", use_container_width=True):
-            _apply_preset("zarya"); st.rerun()
         if _active:
             if st.button(_demo_labels[lang][1], key="btn_live", use_container_width=True):
                 _clear_demo()
@@ -579,26 +516,19 @@ def run_dashboard():
     if _active_preset and _active_preset in DEMO_PRESETS:
         _p_data = DEMO_PRESETS[_active_preset]
         _b_title, _b_desc_tpl, _b_hint = _DEMO_BANNER[lang]
-        _b_desc  = _p_data["desc"].get(lang, _p_data["desc"]["ru"])
-        _label   = _p_data["labels"][lang]
-        _story   = _p_data.get("story", {}).get(lang) or _p_data.get("story", {}).get("ru", "")
-
-        # Convert simple **bold** markdown to HTML
-        import re as _re
-        _story_html = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', _story)
-
+        _b_desc = _p_data["desc"].get(lang, _p_data["desc"]["ru"])
+        _label  = _p_data["labels"][lang]
         st.markdown(
-            f'<div style="background:linear-gradient(135deg,rgba(0,113,227,0.07) 0%,'
-            f'rgba(52,199,89,0.06) 100%);border:1px solid rgba(0,113,227,0.18);'
-            f'border-radius:16px;padding:16px 20px;margin-bottom:16px;">'
-            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            f'<div style="display:flex;align-items:center;gap:12px;'
+            f'background:linear-gradient(135deg,rgba(0,113,227,0.07) 0%,rgba(52,199,89,0.06) 100%);'
+            f'border:1px solid rgba(0,113,227,0.18);border-radius:16px;'
+            f'padding:12px 18px;margin-bottom:16px;">'
             f'<div style="background:#0071E3;color:#fff;font-size:11px;font-weight:700;'
             f'letter-spacing:0.06em;padding:3px 10px;border-radius:980px;white-space:nowrap;">DEMO</div>'
+            f'<div>'
             f'<div style="font-size:14px;font-weight:600;color:#0071E3;">{_label} — {_b_desc}</div>'
+            f'<div style="font-size:12px;color:#AEAEB2;margin-top:2px;">{_b_hint}</div>'
             f'</div>'
-            + (f'<div style="font-size:13px;color:#3C3C43;line-height:1.55;margin-bottom:6px;">'
-               f'{_story_html}</div>' if _story_html else '')
-            + f'<div style="font-size:12px;color:#AEAEB2;">{_b_hint}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )

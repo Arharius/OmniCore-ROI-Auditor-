@@ -200,6 +200,23 @@ div[data-testid="stFormSubmitButton"] button:hover {
 </div>
 """, unsafe_allow_html=True)
 
+        # ── Try demo button ───────────────────────────────────────────────────
+        _demo_labels = {"en": "▶ Try demo without login",
+                        "ru": "▶ Попробовать демо без входа",
+                        "sr": "▶ Isprobajte demo bez prijave"}
+        if st.button(_demo_labels[lang], key="btn_try_demo",
+                     use_container_width=True):
+            st.session_state["demo_only"]   = True
+            st.session_state["demo_preset"] = "logistics"
+            st.session_state["company_name"] = "ТрансЛогик МСК"
+            from ui.dashboard import DEMO_PRESETS, _DEMO_KEYS
+            p = DEMO_PRESETS["logistics"]
+            for k in _DEMO_KEYS:
+                st.session_state[k] = p[k]
+            st.rerun()
+
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
         with st.form("login_form", clear_on_submit=False):
             username = st.text_input(c["login_user"], placeholder="username", key="l_user")
             password = st.text_input(c["login_pass"], type="password", placeholder="••••••••", key="l_pass")
@@ -210,6 +227,7 @@ div[data-testid="stFormSubmitButton"] button:hover {
             if user:
                 st.session_state["auth_user"] = user
                 st.session_state["authenticated"] = True
+                st.session_state.pop("demo_only", None)
                 st.rerun()
             else:
                 st.error(c["login_err"])
