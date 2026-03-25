@@ -6,3 +6,21 @@ id = "6wud_ijNwv-n_V-Tyc6sJ"
 uri = "file://test_passport.pdf"
 type = "pdf"
 title = "ROI Passport — Marteco Digital (тест)"
+
+[[outputs]]
+id = "qpfpj6CDt17az_VfsTrHz"
+uri = "file://PRODUCT.md"
+type = "text"
+title = "Продукт и ценность"
+
+[[outputs]]
+id = "l5pyvkF7Vou48hjM4mQ83"
+uri = "file://MANUAL.md"
+type = "text"
+title = "Инструкция по использованию"
+
+[[outputs]]
+id = "hxn7_Ykm357dUXcydAGAM"
+uri = "file://GTM_SERBIA_MOSCOW.md"
+type = "text"
+title = "Стратегия выхода — Сербия и Москва"
