@@ -7,7 +7,7 @@ _COPY = {
     "en": {
         "hero_label": "AI-powered ROI Audit Platform",
         "hero_h1": "Know the value of automation — before you invest",
-        "hero_sub": "Graph analysis · Markov chains · Bayesian confidence · PDF report — in 5 minutes.",
+        "hero_sub": "Graph analysis · Markov chains · Bayesian confidence · PDF report.",
         "stat1_v": "847%", "stat1_l": "Average ROI",
         "stat2_v": "1.4 mo", "stat2_l": "Average payback",
         "stat3_v": "3 models", "stat3_l": "Independent validation",
@@ -25,7 +25,7 @@ _COPY = {
     "ru": {
         "hero_label": "Платформа ROI-аудита на базе ИИ",
         "hero_h1": "Узнай ценность автоматизации — до того как вложить деньги",
-        "hero_sub": "Граф-анализ · Цепи Маркова · Байесовская уверенность · PDF-отчёт — за 5 минут.",
+        "hero_sub": "Граф-анализ · Цепи Маркова · Байесовская уверенность · PDF-отчёт.",
         "stat1_v": "847%", "stat1_l": "Средний ROI",
         "stat2_v": "1.4 мес", "stat2_l": "Средняя окупаемость",
         "stat3_v": "3 модели", "stat3_l": "Независимая верификация",
@@ -43,7 +43,7 @@ _COPY = {
     "sr": {
         "hero_label": "AI platforma za ROI reviziju",
         "hero_h1": "Saznajte vrednost automatizacije — pre nego što investirate",
-        "hero_sub": "Analiza grafova · Markovljevi lanci · Bajesovsko poverenje · PDF izveštaj — za 5 minuta.",
+        "hero_sub": "Analiza grafova · Markovljevi lanci · Bajesovsko poverenje · PDF izveštaj.",
         "stat1_v": "847%", "stat1_l": "Prosečan ROI",
         "stat2_v": "1.4 mes.", "stat2_l": "Prosečan povrat",
         "stat3_v": "3 modela", "stat3_l": "Nezavisna verifikacija",
