@@ -239,7 +239,7 @@ def run_dashboard():
         text-transform: none !important;
     }
 
-    /* ─── Buttons — Apple pill style ────────────────── */
+    /* ─── Buttons — Apple pill style (main area only) ── */
     div.stDownloadButton > button,
     div.stButton > button {
         background: #0071E3 !important;
@@ -259,6 +259,26 @@ def run_dashboard():
     div.stButton > button:hover {
         background: #0077ED !important;
         opacity: 0.92 !important;
+    }
+
+    /* ─── Sidebar buttons — subtle / secondary ───────── */
+    [data-testid="stSidebar"] div.stButton > button {
+        background: #F5F5F7 !important;
+        color: #1D1D1F !important;
+        border: 1px solid rgba(0,0,0,0.10) !important;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        padding: 6px 10px !important;
+        min-width: unset !important;
+        min-height: unset !important;
+        height: auto !important;
+        line-height: 1.3 !important;
+        box-shadow: none !important;
+    }
+    [data-testid="stSidebar"] div.stButton > button:hover {
+        background: #E8E8ED !important;
+        opacity: 1 !important;
     }
 
     /* ─── Radio & labels ─────────────────────────────── */
@@ -400,8 +420,8 @@ def run_dashboard():
         st.markdown("---")
         st.markdown("## " + t(lang, "sidebar_title"))
 
-        company_name = st.text_input(t(lang, "company_label"), value="Marteco Digital Services",
-                                     key="company_name")
+        st.session_state.setdefault("company_name", "Marteco Digital Services")
+        company_name = st.text_input(t(lang, "company_label"), key="company_name")
 
         csv_file = st.file_uploader(
             t(lang, "csv_label"), type=["csv"], help=t(lang, "csv_help"), key="csv_file"
