@@ -24,207 +24,237 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap');
 
-/* ── Global ── */
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-
-/* ── Premium layered background with ambient orbs ── */
-.stApp {
-    background:
-        radial-gradient(ellipse 60% 50% at 8% 12%,  rgba(26,50,113,0.13)  0%, transparent 65%),
-        radial-gradient(ellipse 55% 45% at 92% 78%,  rgba(0,154,92,0.10)   0%, transparent 60%),
-        radial-gradient(ellipse 45% 40% at 78% 10%,  rgba(192,160,98,0.12) 0%, transparent 55%),
-        radial-gradient(ellipse 70% 60% at 45% 90%,  rgba(26,50,113,0.07)  0%, transparent 60%),
-        linear-gradient(145deg, #eee9df 0%, #f2ede5 40%, #ede8de 100%) !important;
-    background-attachment: fixed !important;
+/* ─── Reset & Base ─────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
 }
 
-/* ── Animated glass orbs overlay ── */
-.stApp::after {
-    content: "";
-    position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background:
-        radial-gradient(ellipse 300px 300px at 15% 25%, rgba(26,50,113,0.06) 0%, transparent 70%),
-        radial-gradient(ellipse 250px 250px at 85% 65%, rgba(0,154,92,0.05) 0%, transparent 70%);
-}
+/* ─── App Shell ────────────────────────────────── */
+.stApp { background: #F6F3EE !important; }
 
-/* ── Premium accent bar ── */
+/* thin navy rule across the very top */
 .stApp::before {
     content: "";
-    position: fixed; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, #1a3271 0%, #3a6fd8 45%, #c0a062 75%, #d4b87a 100%);
+    position: fixed; top: 0; left: 0; right: 0; height: 2px;
+    background: #0F1F4E;
     z-index: 9999;
 }
 
-/* ── GLASS SIDEBAR ── */
+/* ─── Sidebar ──────────────────────────────────── */
 [data-testid="stSidebar"] {
-    background: rgba(255,255,255,0.52) !important;
-    backdrop-filter: blur(28px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
-    border-right: 1px solid rgba(255,255,255,0.75) !important;
-    box-shadow: 4px 0 32px rgba(26,50,113,0.08), inset -1px 0 0 rgba(255,255,255,0.5);
+    background: #FFFFFF !important;
+    border-right: 1px solid #E8E4DC !important;
+    box-shadow: none !important;
 }
-[data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] .stCaption {
-    color: #6e7a94 !important; font-size: 12px;
+    color: #6B7280 !important;
+    font-size: 12px !important;
+    line-height: 1.6 !important;
 }
 [data-testid="stSidebar"] h2 {
-    color: #1a3271 !important; font-size: 12px !important;
-    font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase;
+    color: #0F1F4E !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    margin-bottom: 12px !important;
 }
 
-/* ── GLASS METRIC CARDS ── */
+/* ─── KPI Cards ────────────────────────────────── */
 [data-testid="metric-container"] {
-    background: rgba(255,255,255,0.58) !important;
-    backdrop-filter: blur(20px) saturate(150%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
-    border-radius: 16px !important;
-    padding: 22px 24px !important;
-    border: 1px solid rgba(255,255,255,0.80) !important;
-    box-shadow:
-        0 4px 24px rgba(26,50,113,0.09),
-        0 1px 4px rgba(0,0,0,0.05),
-        inset 0 1px 0 rgba(255,255,255,0.95),
-        inset 0 -1px 0 rgba(26,50,113,0.04) !important;
-    transition: box-shadow 0.25s, transform 0.18s !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E8E4DC !important;
+    border-radius: 10px !important;
+    padding: 20px 22px !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05) !important;
+    transition: box-shadow 0.2s ease, transform 0.2s ease !important;
 }
 [data-testid="metric-container"]:hover {
-    box-shadow:
-        0 10px 40px rgba(26,50,113,0.14),
-        0 2px 8px rgba(0,0,0,0.06),
-        inset 0 1px 0 rgba(255,255,255,0.95) !important;
-    transform: translateY(-2px) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 12px 32px rgba(15,31,78,0.10) !important;
+    transform: translateY(-1px) !important;
 }
 [data-testid="stMetricLabel"] > div {
-    color: #8c96ae !important; font-size: 10px !important;
-    font-weight: 700 !important; letter-spacing: 0.12em !important; text-transform: uppercase;
+    color: #9CA3AF !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: none !important;
 }
 [data-testid="stMetricValue"] > div {
-    color: #009a5c !important; font-size: 28px !important;
-    font-weight: 800 !important; letter-spacing: -0.03em !important;
-    text-shadow: 0 1px 8px rgba(0,154,92,0.18);
+    color: #00875A !important;
+    font-size: 30px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.04em !important;
+    line-height: 1.1 !important;
 }
+[data-testid="stMetricDelta"] > div { font-size: 12px !important; font-weight: 500 !important; }
 
-/* ── GLASS TABS ── */
+/* ─── Tabs ─────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
-    background: rgba(255,255,255,0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border-radius: 12px 12px 0 0 !important;
-    border-bottom: 1px solid rgba(26,50,113,0.10) !important;
-    padding: 0 8px !important;
+    background: transparent !important;
+    border-bottom: 1px solid #E8E4DC !important;
     gap: 0 !important;
+    padding-bottom: 0 !important;
 }
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
-    color: #9aa3b8 !important;
-    font-size: 11px !important; font-weight: 700 !important;
-    letter-spacing: 0.09em !important; text-transform: uppercase !important;
-    border: none !important; border-radius: 0 !important;
-    padding: 13px 22px !important;
-    transition: color 0.2s;
+    color: #9CA3AF !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 12px 20px !important;
+    transition: color 0.15s !important;
 }
+.stTabs [data-baseweb="tab"]:hover { color: #374151 !important; }
 .stTabs [aria-selected="true"] {
-    color: #1a3271 !important;
-    border-bottom: 2px solid #1a3271 !important;
+    color: #0F1F4E !important;
+    font-weight: 600 !important;
+    border-bottom: 2px solid #0F1F4E !important;
     background: transparent !important;
 }
 
-/* ── Headings ── */
+/* ─── Typography ───────────────────────────────── */
 [data-testid="stMarkdownContainer"] h1 {
-    font-size: 24px !important; font-weight: 800 !important;
-    color: #1a2744 !important; letter-spacing: -0.03em !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.25 !important;
 }
 [data-testid="stMarkdownContainer"] h2,
 [data-testid="stMarkdownContainer"] h3 {
-    font-size: 11px !important; font-weight: 700 !important;
-    color: #9aa3b8 !important; letter-spacing: 0.11em !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #9CA3AF !important;
+    letter-spacing: 0.07em !important;
     text-transform: uppercase !important;
 }
+[data-testid="stMarkdownContainer"] p { color: #374151 !important; font-size: 13px !important; }
 [data-testid="stHeadingWithActionElements"] h2,
 [data-testid="stHeadingWithActionElements"] h3 {
-    color: #9aa3b8 !important; font-size: 11px !important;
-    font-weight: 700 !important; letter-spacing: 0.11em !important; text-transform: uppercase;
+    color: #9CA3AF !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.07em !important;
+    text-transform: uppercase !important;
 }
 
-/* ── GLASS BUTTONS ── */
-div.stDownloadButton > button, div.stButton > button {
-    background: rgba(26,50,113,0.88) !important;
-    backdrop-filter: blur(8px) !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255,255,255,0.20) !important;
-    border-radius: 10px !important; font-weight: 600 !important; font-size: 12px !important;
-    letter-spacing: 0.05em !important; padding: 10px 24px !important; width: 100% !important;
-    box-shadow: 0 4px 16px rgba(26,50,113,0.28), inset 0 1px 0 rgba(255,255,255,0.15) !important;
-    transition: all 0.2s !important;
+/* ─── Buttons ──────────────────────────────────── */
+div.stDownloadButton > button,
+div.stButton > button {
+    background: #0F1F4E !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 7px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    padding: 9px 20px !important;
+    width: 100% !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18) !important;
+    transition: background 0.15s ease, box-shadow 0.15s ease !important;
 }
-div.stDownloadButton > button:hover, div.stButton > button:hover {
-    background: rgba(30,61,143,0.95) !important;
-    box-shadow: 0 8px 28px rgba(26,50,113,0.38), inset 0 1px 0 rgba(255,255,255,0.15) !important;
-    transform: translateY(-1px) !important;
+div.stDownloadButton > button:hover,
+div.stButton > button:hover {
+    background: #1a3271 !important;
+    box-shadow: 0 2px 8px rgba(15,31,78,0.28) !important;
 }
 
-/* ── Radio ── */
+/* ─── Inputs & Selects ─────────────────────────── */
 div[data-testid="stRadio"] > label {
-    color: #7a8499 !important; font-size: 11px !important;
-    font-weight: 700 !important; letter-spacing: 0.09em; text-transform: uppercase;
+    color: #6B7280 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
-div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { color: #1a2744 !important; }
-
-/* ── Sliders ── */
+div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
+    color: #111827 !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    text-transform: none !important;
+}
 [data-testid="stSlider"] [data-testid="stTickBarMin"],
-[data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #b0b8cc !important; }
-[data-testid="stSlider"] > div > div > div > div { background: #1a3271 !important; }
+[data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #D1D5DB !important; }
+[data-testid="stSlider"] > div > div > div > div { background: #0F1F4E !important; }
 
-/* ── GLASS DATAFRAMES ── */
+/* ─── Number inputs ────────────────────────────── */
+[data-testid="stNumberInput"] input,
+[data-testid="stTextInput"] input {
+    border: 1px solid #E5E7EB !important;
+    border-radius: 7px !important;
+    font-size: 13px !important;
+    background: #FFFFFF !important;
+    color: #111827 !important;
+}
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stTextInput"] input:focus {
+    border-color: #0F1F4E !important;
+    box-shadow: 0 0 0 3px rgba(15,31,78,0.08) !important;
+}
+
+/* ─── Data Tables ──────────────────────────────── */
 [data-testid="stDataFrame"] {
-    background: rgba(255,255,255,0.55) !important;
-    backdrop-filter: blur(14px) !important;
-    -webkit-backdrop-filter: blur(14px) !important;
-    border: 1px solid rgba(255,255,255,0.75) !important;
-    border-radius: 14px !important; overflow: hidden !important;
-    box-shadow: 0 4px 20px rgba(26,50,113,0.08), inset 0 1px 0 rgba(255,255,255,0.9) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E8E4DC !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
 }
 [data-testid="stDataFrame"] th {
-    background: rgba(240,236,228,0.65) !important; color: #8c96ae !important;
-    font-size: 10px !important; font-weight: 700 !important;
-    letter-spacing: 0.11em; text-transform: uppercase;
+    background: #F9F8F5 !important;
+    color: #9CA3AF !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    border-bottom: 1px solid #E8E4DC !important;
 }
-[data-testid="stDataFrame"] td { color: #1a2744 !important; font-size: 13px !important; }
+[data-testid="stDataFrame"] td {
+    color: #374151 !important;
+    font-size: 13px !important;
+    border-bottom: 1px solid #F3F0EB !important;
+}
 
-/* ── GLASS CODE BLOCKS ── */
+/* ─── Code / Passport ──────────────────────────── */
 [data-testid="stCode"] {
-    background: rgba(255,255,255,0.50) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(255,255,255,0.72) !important; border-radius: 12px !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 12px rgba(26,50,113,0.06) !important;
+    background: #F9F8F5 !important;
+    border: 1px solid #E8E4DC !important;
+    border-radius: 8px !important;
 }
-[data-testid="stCode"] code { color: #1a3271 !important; font-size: 12px !important; }
+[data-testid="stCode"] code {
+    color: #0F1F4E !important;
+    font-size: 12px !important;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
 
-/* ── GLASS ALERTS ── */
+/* ─── Info / Alert boxes ───────────────────────── */
 [data-testid="stAlert"] {
-    background: rgba(238,242,251,0.72) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(26,50,113,0.14) !important;
-    border-radius: 12px !important; color: #1a3271 !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.8) !important;
+    background: #EFF6FF !important;
+    border: 1px solid #DBEAFE !important;
+    border-left: 3px solid #0F1F4E !important;
+    border-radius: 8px !important;
+    color: #1e3a5f !important;
 }
+[data-testid="stAlert"] p { color: #1e3a5f !important; font-size: 13px !important; }
 
-/* ── Horizontal rule ── */
-hr { border-color: rgba(26,50,113,0.08) !important; }
+/* ─── Dividers ─────────────────────────────────── */
+hr { border: none !important; border-top: 1px solid #E8E4DC !important; }
 
-/* ── Main content area inner glass panel ── */
-.main .block-container {
-    background: rgba(255,255,255,0.28) !important;
-    backdrop-filter: blur(6px) !important;
-    -webkit-backdrop-filter: blur(6px) !important;
-    border-radius: 20px 20px 0 0 !important;
-    border: 1px solid rgba(255,255,255,0.55) !important;
-    border-bottom: none !important;
-    box-shadow: 0 -2px 40px rgba(26,50,113,0.05), inset 0 1px 0 rgba(255,255,255,0.8) !important;
-    margin-top: 8px !important;
+/* ─── Expanders ────────────────────────────────── */
+[data-testid="stExpander"] {
+    border: 1px solid #E8E4DC !important;
+    border-radius: 8px !important;
+    background: #FFFFFF !important;
 }
 </style>
 """, unsafe_allow_html=True)
