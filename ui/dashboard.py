@@ -22,36 +22,75 @@ from ui.i18n import TRANSLATIONS, LANG_NAMES, t
 DEMO_PRESETS = {
     "logistics": {
         "labels": {"en": "🚛 Logistics", "ru": "🚛 Логистика", "sr": "🚛 Logistika"},
-        "desc":   {"en": "Logistics / Distribution — 480 manual hrs/mo, 1 200 deals",
-                   "ru": "Логистика / Дистрибуция — 480 ручных ч/мес, 1 200 сделок",
-                   "sr": "Logistika / Distribucija — 480 ručnih h/mes., 1 200 poslova"},
-        "company_name": "LogiTrans Srbija d.o.o.",
-        "manual_hours": 480, "automation_rate": 78, "hour_rate": 14,
-        "error_before": 12.0, "error_after": 2.0, "cost_per_error": 180, "volume": 1200,
-        "cycle_before": 14, "cycle_after": 6, "deals_month": 80, "deal_value": 850,
-        "p_before": 68, "p_after": 91, "impl_cost": 22000,
+        "desc": {
+            "en": "3PL operator Moscow — 14 managers, 520 manual hrs/mo, deal avg 12 000 €",
+            "ru": "3PL-оператор Москва — 14 менеджеров, 520 ручных ч/мес, ср. контракт 12 000 €",
+            "sr": "3PL operator Moskva — 14 menadžera, 520 ručnih h/mes., ugovor 12 000 €",
+        },
+        "story": {
+            "ru": (
+                "**ТрансЛогик МСК** — 3PL-оператор, 180 корпоративных клиентов. "
+                "14 менеджеров по продажам вручную переносили заявки из почты в Excel, "
+                "затем в 1С, согласовывали тарифы по email и выставляли счета в PDF. "
+                "18 дней от заявки до подписанного договора — клиенты уходили к конкурентам. "
+                "После внедрения CRM-автоматизации + AI-квалификации: цикл 5 дней, "
+                "ошибки в документах снизились с 14% до 1.8%. **ROI: 847%, окупаемость 2.1 мес.**"
+            ),
+        },
+        "company_name": "ТрансЛогик МСК",
+        "manual_hours": 520, "automation_rate": 75, "hour_rate": 15,
+        "error_before": 14.0, "error_after": 1.8, "cost_per_error": 220, "volume": 1400,
+        "cycle_before": 18, "cycle_after": 5, "deals_month": 85, "deal_value": 12000,
+        "p_before": 64, "p_after": 89, "impl_cost": 28000,
     },
     "agency": {
         "labels": {"en": "🎯 Agency", "ru": "🎯 Агентство", "sr": "🎯 Agencija"},
-        "desc":   {"en": "Marketing Agency — 280 hrs/mo, avg deal 3 500 €",
-                   "ru": "Маркетинговое агентство — 280 ч/мес, ср. сделка 3 500 €",
-                   "sr": "Marketing agencija — 280 h/mes., prosečan posao 3 500 €"},
-        "company_name": "Creative Agency Moscow",
-        "manual_hours": 280, "automation_rate": 72, "hour_rate": 28,
-        "error_before": 6.5, "error_after": 0.8, "cost_per_error": 120, "volume": 400,
-        "cycle_before": 30, "cycle_after": 12, "deals_month": 15, "deal_value": 3500,
-        "p_before": 65, "p_after": 88, "impl_cost": 18000,
+        "desc": {
+            "en": "Performance agency Moscow — 18 clients, 320 manual hrs/mo reporting, avg account 8 500 €",
+            "ru": "Performance-агентство Москва — 18 клиентов, 320 ч/мес на отчёты, ср. аккаунт 8 500 €",
+            "sr": "Performance agencija Moskva — 18 klijenata, 320 h/mes. izveštaji, prosečan nalog 8 500 €",
+        },
+        "story": {
+            "ru": (
+                "**MOKO Digital** — performance-агентство, Москва, 30 сотрудников. "
+                "Каждый менеджер тратил 5 ч/нед на ручной сбор цифр из FB Ads, Google Ads, "
+                "myTarget и VK в один Excel-отчёт для клиента. Итого: 320 ч/мес = 8 000 € зарплаты "
+                "просто на копирование данных. 8.5% отчётов содержали ошибки — клиенты фиксировали "
+                "расхождения и запрашивали скидки. После подключения BI-коннекторов и "
+                "авто-рассылки к утру понедельника: цикл отчёта 0.3 дня, ошибки 0.9%. "
+                "**ROI: 1 240%, окупаемость 0.9 мес.**"
+            ),
+        },
+        "company_name": "MOKO Digital",
+        "manual_hours": 320, "automation_rate": 85, "hour_rate": 25,
+        "error_before": 8.5, "error_after": 0.9, "cost_per_error": 150, "volume": 280,
+        "cycle_before": 21, "cycle_after": 7, "deals_month": 18, "deal_value": 8500,
+        "p_before": 71, "p_after": 92, "impl_cost": 15000,
     },
-    "saas": {
-        "labels": {"en": "💻 B2B SaaS", "ru": "💻 B2B SaaS", "sr": "💻 B2B SaaS"},
-        "desc":   {"en": "B2B SaaS / Tech — 45-day sales cycle, avg deal 5 000 €",
-                   "ru": "B2B SaaS / Технологии — цикл 45 дн., ср. сделка 5 000 €",
-                   "sr": "B2B SaaS / Tehnologija — ciklus 45 dana, prosečan posao 5 000 €"},
-        "company_name": "TechFlow Solutions",
-        "manual_hours": 200, "automation_rate": 90, "hour_rate": 30,
-        "error_before": 5.0, "error_after": 0.5, "cost_per_error": 250, "volume": 300,
-        "cycle_before": 45, "cycle_after": 18, "deals_month": 12, "deal_value": 5000,
-        "p_before": 62, "p_after": 88, "impl_cost": 35000,
+    "retail": {
+        "labels": {"en": "🛒 Retail", "ru": "🛒 Ритейл", "sr": "🛒 Maloprodaja"},
+        "desc": {
+            "en": "Retail chain Belgrade — 12 stores, 380 manual hrs/mo, 2 200 invoices",
+            "ru": "Сеть магазинов Белград — 12 точек, 380 ч/мес, 2 200 накладных",
+            "sr": "Maloprodajni lanac Beograd — 12 prodavnica, 380 h/mes., 2 200 faktura",
+        },
+        "story": {
+            "ru": (
+                "**МегаМаркет d.o.o.** — сеть 12 магазинов в Белграде и Нови-Саде. "
+                "Закупочный отдел из 4 человек вручную сводил заявки магазинов в Google Sheets, "
+                "отправлял заказы поставщикам по email и вручную разносил 2 200 входящих накладных "
+                "в Pantheon ERP. Ошибки в 9.2% накладных приводили к пересортице и возвратам. "
+                "Цикл заказа — 8 дней: магазины держали завышенный страховой запас (+35% к норме). "
+                "После EDI-интеграции с 6 ключевыми поставщиками и авто-импорта в ERP: "
+                "цикл 3 дня, ошибки 1.5%, страховой запас снизился. "
+                "**ROI: 612%, окупаемость 2.8 мес.**"
+            ),
+        },
+        "company_name": "МегаМаркет d.o.o.",
+        "manual_hours": 380, "automation_rate": 68, "hour_rate": 10,
+        "error_before": 9.2, "error_after": 1.5, "cost_per_error": 95, "volume": 2200,
+        "cycle_before": 8, "cycle_after": 3, "deals_month": 45, "deal_value": 1800,
+        "p_before": 72, "p_after": 93, "impl_cost": 19000,
     },
 }
 _DEMO_KEYS = ["manual_hours", "automation_rate", "hour_rate",
@@ -387,9 +426,9 @@ def run_dashboard():
                        key="btn_agency", use_container_width=True):
             _apply_preset("agency")
             st.rerun()
-        if _dc3.button(DEMO_PRESETS["saas"]["labels"][lang],
-                       key="btn_saas", use_container_width=True):
-            _apply_preset("saas")
+        if _dc3.button(DEMO_PRESETS["retail"]["labels"][lang],
+                       key="btn_retail", use_container_width=True):
+            _apply_preset("retail")
             st.rerun()
         if _active:
             if st.button(_demo_labels[lang][1], key="btn_live", use_container_width=True):
@@ -515,21 +554,26 @@ def run_dashboard():
     if _active_preset and _active_preset in DEMO_PRESETS:
         _p_data = DEMO_PRESETS[_active_preset]
         _b_title, _b_desc_tpl, _b_hint = _DEMO_BANNER[lang]
-        _b_desc = _b_desc_tpl.format(desc=_p_data["desc"][lang])
-        _label  = _p_data["labels"][lang]
+        _b_desc  = _p_data["desc"].get(lang, _p_data["desc"]["ru"])
+        _label   = _p_data["labels"][lang]
+        _story   = _p_data.get("story", {}).get(lang) or _p_data.get("story", {}).get("ru", "")
+
+        # Convert simple **bold** markdown to HTML
+        import re as _re
+        _story_html = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', _story)
+
         st.markdown(
-            f'<div style="display:flex;align-items:flex-start;gap:14px;'
-            f'background:linear-gradient(135deg,rgba(0,113,227,0.07) 0%,rgba(52,199,89,0.06) 100%);'
-            f'border:1px solid rgba(0,113,227,0.18);border-radius:16px;'
-            f'padding:14px 20px;margin-bottom:16px;">'
-            f'<div style="flex-shrink:0;background:#0071E3;color:#fff;font-size:11px;'
-            f'font-weight:700;letter-spacing:0.06em;padding:3px 10px;border-radius:980px;'
-            f'margin-top:2px;white-space:nowrap;">DEMO</div>'
-            f'<div>'
-            f'<div style="font-size:14px;font-weight:600;color:#0071E3;margin-bottom:2px;">'
-            f'{_label} — {_b_desc}</div>'
-            f'<div style="font-size:13px;color:#6E6E73;">{_b_hint}</div>'
+            f'<div style="background:linear-gradient(135deg,rgba(0,113,227,0.07) 0%,'
+            f'rgba(52,199,89,0.06) 100%);border:1px solid rgba(0,113,227,0.18);'
+            f'border-radius:16px;padding:16px 20px;margin-bottom:16px;">'
+            f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            f'<div style="background:#0071E3;color:#fff;font-size:11px;font-weight:700;'
+            f'letter-spacing:0.06em;padding:3px 10px;border-radius:980px;white-space:nowrap;">DEMO</div>'
+            f'<div style="font-size:14px;font-weight:600;color:#0071E3;">{_label} — {_b_desc}</div>'
             f'</div>'
+            + (f'<div style="font-size:13px;color:#3C3C43;line-height:1.55;margin-bottom:6px;">'
+               f'{_story_html}</div>' if _story_html else '')
+            + f'<div style="font-size:12px;color:#AEAEB2;">{_b_hint}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
