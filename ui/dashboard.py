@@ -88,9 +88,35 @@ DEMO_PRESETS = {
         },
         "company_name": "МегаМаркет d.o.o.",
         "manual_hours": 380, "automation_rate": 68, "hour_rate": 10,
-        "error_before": 9.2, "error_after": 1.5, "cost_per_error": 95, "volume": 2200,
+        "error_before": 9.2, "error_after": 1.5, "cost_per_error": 95, "volume": 2000,
         "cycle_before": 8, "cycle_after": 3, "deals_month": 45, "deal_value": 1800,
         "p_before": 72, "p_after": 93, "impl_cost": 19000,
+    },
+    "zarya": {
+        "labels": {"en": "🏛️ FSUE Zarya", "ru": "🏛️ ФГУП НТЦ Заря", "sr": "🏛️ FSUE Zarya"},
+        "desc": {
+            "en": "FSUE NTC Zarya — 6 staff, 290 manual hrs/mo, 180 technical documents",
+            "ru": "ФГУП НТЦ Заря — 6 сотрудников, 290 ч/мес, 180 тех. документов",
+            "sr": "FSUE NTC Zarya — 6 zaposlenih, 290 ručnih h/mes., 180 tehničkih dokumenata",
+        },
+        "story": {
+            "ru": (
+                "**ФГУП НТЦ Заря** — федеральное научно-техническое предприятие. "
+                "Отдел документооборота из 6 сотрудников вручную готовил акты приёмки НИОКР, "
+                "технические отчёты, сметы и документы по 44-ФЗ. Каждый документ проходил "
+                "5–7 итераций согласования: подразделение → юрист → бухгалтерия → руководство → "
+                "заказчик. Средний цикл контракта — 35 дней. 11% документов возвращались "
+                "на доработку из-за ошибок в реквизитах или несоответствия ГОСТ. "
+                "Одна ошибка в гос. документе = повторный цикл согласования (2–3 недели). "
+                "После внедрения СЭД с маршрутами согласования и авто-проверкой по ГОСТ: "
+                "цикл 14 дней, возвраты 1.5%. **ROI: 523%, окупаемость 3.4 мес.**"
+            ),
+        },
+        "company_name": "ФГУП НТЦ Заря",
+        "manual_hours": 290, "automation_rate": 65, "hour_rate": 18,
+        "error_before": 11.0, "error_after": 1.5, "cost_per_error": 400, "volume": 180,
+        "cycle_before": 35, "cycle_after": 14, "deals_month": 8, "deal_value": 5000,
+        "p_before": 58, "p_after": 82, "impl_cost": 22000,
     },
 }
 _DEMO_KEYS = ["manual_hours", "automation_rate", "hour_rate",
@@ -415,21 +441,20 @@ def run_dashboard():
             unsafe_allow_html=True,
         )
         _active = st.session_state.get("demo_preset")
-        _dc1, _dc2, _dc3 = st.columns(3)
-        _styles = {k: ("background:#0071E3;color:#fff;" if _active == k
-                       else "background:#F5F5F7;color:#1D1D1F;") for k in DEMO_PRESETS}
-        if _dc1.button(DEMO_PRESETS["logistics"]["labels"][lang],
-                       key="btn_logistics", use_container_width=True):
-            _apply_preset("logistics")
-            st.rerun()
-        if _dc2.button(DEMO_PRESETS["agency"]["labels"][lang],
-                       key="btn_agency", use_container_width=True):
-            _apply_preset("agency")
-            st.rerun()
-        if _dc3.button(DEMO_PRESETS["retail"]["labels"][lang],
-                       key="btn_retail", use_container_width=True):
-            _apply_preset("retail")
-            st.rerun()
+        _r1c1, _r1c2 = st.columns(2)
+        _r2c1, _r2c2 = st.columns(2)
+        if _r1c1.button(DEMO_PRESETS["logistics"]["labels"][lang],
+                        key="btn_logistics", use_container_width=True):
+            _apply_preset("logistics"); st.rerun()
+        if _r1c2.button(DEMO_PRESETS["agency"]["labels"][lang],
+                        key="btn_agency", use_container_width=True):
+            _apply_preset("agency"); st.rerun()
+        if _r2c1.button(DEMO_PRESETS["retail"]["labels"][lang],
+                        key="btn_retail", use_container_width=True):
+            _apply_preset("retail"); st.rerun()
+        if _r2c2.button(DEMO_PRESETS["zarya"]["labels"][lang],
+                        key="btn_zarya", use_container_width=True):
+            _apply_preset("zarya"); st.rerun()
         if _active:
             if st.button(_demo_labels[lang][1], key="btn_live", use_container_width=True):
                 _clear_demo()
@@ -447,7 +472,7 @@ def run_dashboard():
 
         st.markdown("---")
         st.markdown(t(lang, "labor_section"))
-        manual_hours    = st.slider(t(lang, "manual_hours"),   50,   500, 320,       key="manual_hours")
+        manual_hours    = st.slider(t(lang, "manual_hours"),   50,   600, 320,       key="manual_hours")
         automation_rate = st.slider(t(lang, "automation_pct"), 50,    95,  86,       key="automation_rate")
         hour_rate       = st.slider(t(lang, "hour_rate"),       8,    30,  12,       key="hour_rate")
 
@@ -460,8 +485,8 @@ def run_dashboard():
         st.markdown(t(lang, "cycle_section"))
         cycle_before = st.slider(t(lang, "cycle_before"),  5,  60, 21,             key="cycle_before")
         cycle_after  = st.slider(t(lang, "cycle_after"),   1,  30,  9,             key="cycle_after")
-        deals        = st.slider(t(lang, "deals_month"),   5, 200, 25,             key="deals_month")
-        deal_value   = st.slider(t(lang, "deal_value"),  100, 5000, 650,           key="deal_value")
+        deals        = st.slider(t(lang, "deals_month"),   5, 200, 25,              key="deals_month")
+        deal_value   = st.slider(t(lang, "deal_value"),  100, 15000, 700, step=100, key="deal_value")
 
         st.markdown(t(lang, "proba_section"))
         p_before = st.slider(t(lang, "p_before"), 50,  95, 74, key="p_before")
