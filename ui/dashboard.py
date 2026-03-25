@@ -24,42 +24,25 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-[data-testid="stSidebar"] { background-color: #0e1117; }
-[data-testid="stSidebar"] * { color: #e0e0e0; }
-
 [data-testid="metric-container"] {
     background: #1e2130;
     border-radius: 10px;
     padding: 16px 20px;
-    border: 1px solid #636EFA55;
+    border: 1px solid rgba(99,110,250,0.35);
     margin-bottom: 4px;
 }
-[data-testid="stMetricLabel"] > div { color: #aaaacc !important; font-size: 13px; }
-[data-testid="stMetricValue"] > div { color: #00CC96 !important; font-size: 26px !important; font-weight: 700; }
-
-.stTabs [data-baseweb="tab"] {
-    background: #1e2130;
-    border-radius: 6px 6px 0 0;
-    color: #cccccc;
-    padding: 8px 18px;
-    font-weight: 500;
+[data-testid="stMetricValue"] > div {
+    color: #00CC96 !important;
+    font-size: 26px !important;
+    font-weight: 700;
 }
-.stTabs [aria-selected="true"] {
-    background: #636EFA !important;
-    color: white !important;
-}
-
-div.stButton > button {
+div.stDownloadButton > button, div.stButton > button {
     background: linear-gradient(90deg, #636EFA, #00CC96);
     color: white; border: none; border-radius: 8px;
     font-weight: 600; padding: 10px 24px;
+    width: 100%;
 }
-div.stButton > button:hover { opacity: 0.88; }
-
-h1, h2, h3 { color: #ffffff !important; }
-p, li { color: #dddddd; }
-
-[data-testid="stDataFrame"] { background: #1e2130; }
+div.stDownloadButton > button:hover, div.stButton > button:hover { opacity: 0.85; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -290,8 +273,7 @@ with tab2:
         textfont=dict(color="#ffffff", size=12),
         marker=dict(color=node_colors, size=node_sizes,
                     line=dict(color="white", width=1.5)),
-        hovertemplate="%{text}<br>{}: %{{customdata:.4f}}<extra></extra>".format(
-            t(lang, "centrality_col")),
+        hovertemplate="%{text}<br>" + t(lang, "centrality_col") + ": %{customdata:.4f}<extra></extra>",
         customdata=[graph_res.betweenness[n] for n in nodes],
     ))
     fig_g.update_layout(
