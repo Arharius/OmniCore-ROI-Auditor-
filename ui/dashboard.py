@@ -29,53 +29,92 @@ st.markdown("""
 /* ── Global ── */
 html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
-/* ── App background — warm ivory ── */
+/* ── Premium layered background with ambient orbs ── */
 .stApp {
-    background: #f0ece4 !important;
+    background:
+        radial-gradient(ellipse 60% 50% at 8% 12%,  rgba(26,50,113,0.13)  0%, transparent 65%),
+        radial-gradient(ellipse 55% 45% at 92% 78%,  rgba(0,154,92,0.10)   0%, transparent 60%),
+        radial-gradient(ellipse 45% 40% at 78% 10%,  rgba(192,160,98,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 60% at 45% 90%,  rgba(26,50,113,0.07)  0%, transparent 60%),
+        linear-gradient(145deg, #eee9df 0%, #f2ede5 40%, #ede8de 100%) !important;
+    background-attachment: fixed !important;
 }
 
-/* ── Sidebar — white panel ── */
+/* ── Animated glass orbs overlay ── */
+.stApp::after {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+        radial-gradient(ellipse 300px 300px at 15% 25%, rgba(26,50,113,0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 250px 250px at 85% 65%, rgba(0,154,92,0.05) 0%, transparent 70%);
+}
+
+/* ── Premium accent bar ── */
+.stApp::before {
+    content: "";
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #1a3271 0%, #3a6fd8 45%, #c0a062 75%, #d4b87a 100%);
+    z-index: 9999;
+}
+
+/* ── GLASS SIDEBAR ── */
 [data-testid="stSidebar"] {
-    background: #ffffff !important;
-    border-right: 1px solid rgba(0,0,0,0.07) !important;
-    box-shadow: 2px 0 16px rgba(0,0,0,0.05);
+    background: rgba(255,255,255,0.52) !important;
+    backdrop-filter: blur(28px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+    border-right: 1px solid rgba(255,255,255,0.75) !important;
+    box-shadow: 4px 0 32px rgba(26,50,113,0.08), inset -1px 0 0 rgba(255,255,255,0.5);
 }
 [data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stCaption {
-    color: #7a8499 !important; font-size: 12px;
+    color: #6e7a94 !important; font-size: 12px;
 }
 [data-testid="stSidebar"] h2 {
-    color: #1a3271 !important; font-size: 13px !important;
-    font-weight: 700 !important; letter-spacing: 0.09em !important; text-transform: uppercase;
+    color: #1a3271 !important; font-size: 12px !important;
+    font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase;
 }
 
-/* ── Metric cards — white with shadow ── */
+/* ── GLASS METRIC CARDS ── */
 [data-testid="metric-container"] {
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 22px 26px;
-    border: 1px solid rgba(0,0,0,0.07);
-    box-shadow: 0 2px 12px rgba(26,50,113,0.07), 0 1px 3px rgba(0,0,0,0.04);
-    transition: box-shadow 0.2s, transform 0.15s;
+    background: rgba(255,255,255,0.58) !important;
+    backdrop-filter: blur(20px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+    border-radius: 16px !important;
+    padding: 22px 24px !important;
+    border: 1px solid rgba(255,255,255,0.80) !important;
+    box-shadow:
+        0 4px 24px rgba(26,50,113,0.09),
+        0 1px 4px rgba(0,0,0,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.95),
+        inset 0 -1px 0 rgba(26,50,113,0.04) !important;
+    transition: box-shadow 0.25s, transform 0.18s !important;
 }
 [data-testid="metric-container"]:hover {
-    box-shadow: 0 6px 24px rgba(26,50,113,0.12);
-    transform: translateY(-1px);
+    box-shadow:
+        0 10px 40px rgba(26,50,113,0.14),
+        0 2px 8px rgba(0,0,0,0.06),
+        inset 0 1px 0 rgba(255,255,255,0.95) !important;
+    transform: translateY(-2px) !important;
 }
 [data-testid="stMetricLabel"] > div {
-    color: #9aa3b8 !important; font-size: 11px !important;
-    font-weight: 600 !important; letter-spacing: 0.1em !important; text-transform: uppercase;
+    color: #8c96ae !important; font-size: 10px !important;
+    font-weight: 700 !important; letter-spacing: 0.12em !important; text-transform: uppercase;
 }
 [data-testid="stMetricValue"] > div {
     color: #009a5c !important; font-size: 28px !important;
     font-weight: 800 !important; letter-spacing: -0.03em !important;
+    text-shadow: 0 1px 8px rgba(0,154,92,0.18);
 }
 
-/* ── Tabs ── */
+/* ── GLASS TABS ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: transparent !important;
-    border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+    background: rgba(255,255,255,0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-radius: 12px 12px 0 0 !important;
+    border-bottom: 1px solid rgba(26,50,113,0.10) !important;
+    padding: 0 8px !important;
     gap: 0 !important;
 }
 .stTabs [data-baseweb="tab"] {
@@ -84,7 +123,8 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     font-size: 11px !important; font-weight: 700 !important;
     letter-spacing: 0.09em !important; text-transform: uppercase !important;
     border: none !important; border-radius: 0 !important;
-    padding: 12px 22px !important;
+    padding: 13px 22px !important;
+    transition: color 0.2s;
 }
 .stTabs [aria-selected="true"] {
     color: #1a3271 !important;
@@ -100,31 +140,33 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 [data-testid="stMarkdownContainer"] h2,
 [data-testid="stMarkdownContainer"] h3 {
     font-size: 11px !important; font-weight: 700 !important;
-    color: #9aa3b8 !important; letter-spacing: 0.1em !important;
+    color: #9aa3b8 !important; letter-spacing: 0.11em !important;
     text-transform: uppercase !important;
 }
 [data-testid="stHeadingWithActionElements"] h2,
 [data-testid="stHeadingWithActionElements"] h3 {
     color: #9aa3b8 !important; font-size: 11px !important;
-    font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase;
+    font-weight: 700 !important; letter-spacing: 0.11em !important; text-transform: uppercase;
 }
 
-/* ── Buttons ── */
+/* ── GLASS BUTTONS ── */
 div.stDownloadButton > button, div.stButton > button {
-    background: #1a3271 !important;
-    color: #ffffff !important; border: none !important;
-    border-radius: 8px; font-weight: 600; font-size: 12px;
-    letter-spacing: 0.05em; padding: 10px 24px; width: 100%;
-    box-shadow: 0 2px 8px rgba(26,50,113,0.25);
-    transition: all 0.2s;
+    background: rgba(26,50,113,0.88) !important;
+    backdrop-filter: blur(8px) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.20) !important;
+    border-radius: 10px !important; font-weight: 600 !important; font-size: 12px !important;
+    letter-spacing: 0.05em !important; padding: 10px 24px !important; width: 100% !important;
+    box-shadow: 0 4px 16px rgba(26,50,113,0.28), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    transition: all 0.2s !important;
 }
 div.stDownloadButton > button:hover, div.stButton > button:hover {
-    background: #1e3d8f !important;
-    box-shadow: 0 4px 16px rgba(26,50,113,0.35) !important;
-    transform: translateY(-1px);
+    background: rgba(30,61,143,0.95) !important;
+    box-shadow: 0 8px 28px rgba(26,50,113,0.38), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    transform: translateY(-1px) !important;
 }
 
-/* ── Radio (language) ── */
+/* ── Radio ── */
 div[data-testid="stRadio"] > label {
     color: #7a8499 !important; font-size: 11px !important;
     font-weight: 700 !important; letter-spacing: 0.09em; text-transform: uppercase;
@@ -136,41 +178,53 @@ div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { color: #1a274
 [data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #b0b8cc !important; }
 [data-testid="stSlider"] > div > div > div > div { background: #1a3271 !important; }
 
-/* ── Dataframes ── */
+/* ── GLASS DATAFRAMES ── */
 [data-testid="stDataFrame"] {
-    border: 1px solid rgba(0,0,0,0.07); border-radius: 10px;
-    overflow: hidden; background: #fff;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    background: rgba(255,255,255,0.55) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(255,255,255,0.75) !important;
+    border-radius: 14px !important; overflow: hidden !important;
+    box-shadow: 0 4px 20px rgba(26,50,113,0.08), inset 0 1px 0 rgba(255,255,255,0.9) !important;
 }
 [data-testid="stDataFrame"] th {
-    background: #f8f6f2 !important; color: #9aa3b8 !important;
+    background: rgba(240,236,228,0.65) !important; color: #8c96ae !important;
     font-size: 10px !important; font-weight: 700 !important;
-    letter-spacing: 0.1em; text-transform: uppercase;
+    letter-spacing: 0.11em; text-transform: uppercase;
 }
 [data-testid="stDataFrame"] td { color: #1a2744 !important; font-size: 13px !important; }
 
-/* ── Code (passport) ── */
+/* ── GLASS CODE BLOCKS ── */
 [data-testid="stCode"] {
-    background: #f8f6f2 !important;
-    border: 1px solid rgba(0,0,0,0.07); border-radius: 10px;
+    background: rgba(255,255,255,0.50) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255,255,255,0.72) !important; border-radius: 12px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 12px rgba(26,50,113,0.06) !important;
 }
 [data-testid="stCode"] code { color: #1a3271 !important; font-size: 12px !important; }
 
-/* ── Info boxes ── */
+/* ── GLASS ALERTS ── */
 [data-testid="stAlert"] {
-    background: #eef2fb !important; border: 1px solid rgba(26,50,113,0.15) !important;
-    border-radius: 10px; color: #1a3271 !important;
+    background: rgba(238,242,251,0.72) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(26,50,113,0.14) !important;
+    border-radius: 12px !important; color: #1a3271 !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.8) !important;
 }
 
 /* ── Horizontal rule ── */
-hr { border-color: rgba(0,0,0,0.07) !important; }
+hr { border-color: rgba(26,50,113,0.08) !important; }
 
-/* ── Navy top accent bar ── */
-.stApp::before {
-    content: "";
-    position: fixed; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, #1a3271 0%, #2a52a0 50%, #c0a062 100%);
-    z-index: 9999;
+/* ── Main content area inner glass panel ── */
+.main .block-container {
+    background: rgba(255,255,255,0.28) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+    border-radius: 20px 20px 0 0 !important;
+    border: 1px solid rgba(255,255,255,0.55) !important;
+    border-bottom: none !important;
+    box-shadow: 0 -2px 40px rgba(26,50,113,0.05), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+    margin-top: 8px !important;
 }
 </style>
 """, unsafe_allow_html=True)
