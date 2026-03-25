@@ -21,7 +21,7 @@ from ui.i18n import TRANSLATIONS, LANG_NAMES, t
 # ── Demo presets ──────────────────────────────────────────────────────────────
 DEMO_PRESETS = {
     "logistics": {
-        "labels": {"en": "🚛 Logistics", "ru": "🚛 Логистика", "sr": "🚛 Logistika"},
+        "labels": {"en": "Logistics", "ru": "Логистика", "sr": "Logistika"},
         "desc": {
             "en": "3PL operator Moscow — 14 managers, 520 manual hrs/mo, deal avg 12 000 €",
             "ru": "3PL-оператор Москва — 14 менеджеров, 520 ручных ч/мес, ср. контракт 12 000 €",
@@ -34,7 +34,7 @@ DEMO_PRESETS = {
         "p_before": 64, "p_after": 89, "impl_cost": 28000,
     },
     "agency": {
-        "labels": {"en": "🎯 Agency", "ru": "🎯 Агентство", "sr": "🎯 Agencija"},
+        "labels": {"en": "Agency", "ru": "Агентство", "sr": "Agencija"},
         "desc": {
             "en": "Performance agency Moscow — 18 clients, 320 manual hrs/mo reporting, avg account 8 500 €",
             "ru": "Performance-агентство Москва — 18 клиентов, 320 ч/мес на отчёты, ср. аккаунт 8 500 €",
@@ -47,7 +47,7 @@ DEMO_PRESETS = {
         "p_before": 71, "p_after": 92, "impl_cost": 15000,
     },
     "retail": {
-        "labels": {"en": "🛒 Retail", "ru": "🛒 Ритейл", "sr": "🛒 Maloprodaja"},
+        "labels": {"en": "Retail", "ru": "Ритейл", "sr": "Maloprodaja"},
         "desc": {
             "en": "Retail chain Belgrade — 12 stores, 380 manual hrs/mo, 2 200 invoices",
             "ru": "Сеть магазинов Белград — 12 точек, 380 ч/мес, 2 200 накладных",
@@ -398,13 +398,13 @@ def run_dashboard():
 
         # ── Demo preset switcher ───────────────────────────────────────────────
         _demo_labels = {
-            "en": ("🎭 Demo presets", "▶ Run live audit"),
-            "ru": ("🎭 Демо-кейсы", "▶ Живой аудит"),
-            "sr": ("🎭 Demo slučajevi", "▶ Živi audit"),
+            "en": ("Demo cases", "Run live audit"),
+            "ru": ("Демо-кейсы", "Живой аудит"),
+            "sr": ("Demo slučajevi", "Živi audit"),
         }
         st.markdown(
-            f'<div style="font-size:12px;font-weight:600;color:#6E6E73;'
-            f'letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;">'
+            f'<div style="font-size:11px;font-weight:600;color:#AEAEB2;'
+            f'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">'
             f'{_demo_labels[lang][0]}</div>',
             unsafe_allow_html=True,
         )
