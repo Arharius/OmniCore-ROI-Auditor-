@@ -5,5 +5,3 @@ scipy>=1.11.0
 streamlit>=1.29.0
 plotly>=5.18.0
 reportlab>=4.0.0
-fastapi>=0.104.0
-uvicorn>=0.24.0
