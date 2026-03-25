@@ -1,3 +1,0 @@
-libfreetype6-dev
-libffi-dev
-libssl-dev
