@@ -24,158 +24,182 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ── Global ── */
 html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
-/* ── App background ── */
+/* ── App background — warm ivory ── */
 .stApp {
-    background: radial-gradient(ellipse at 20% 0%, #0b1628 0%, #060a11 55%, #050810 100%) !important;
+    background: #f0ece4 !important;
 }
 
-/* ── Sidebar ── */
+/* ── Sidebar — white panel ── */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0a111e 0%, #060d18 100%) !important;
-    border-right: 1px solid rgba(192,160,98,0.12) !important;
+    background: #ffffff !important;
+    border-right: 1px solid rgba(0,0,0,0.07) !important;
+    box-shadow: 2px 0 16px rgba(0,0,0,0.05);
 }
 [data-testid="stSidebar"] .stMarkdown p,
 [data-testid="stSidebar"] label,
-[data-testid="stSidebar"] .stCaption { color: #8b92a5 !important; font-size: 12px; }
-[data-testid="stSidebar"] h2 { color: #c0a062 !important; font-size: 14px !important;
-    font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase; }
-
-/* ── Metric cards ── */
-[data-testid="metric-container"] {
-    background: linear-gradient(145deg, #0e1828 0%, #0b1320 100%);
-    border-radius: 12px;
-    padding: 20px 24px;
-    border: 1px solid rgba(192,160,98,0.18);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
-    transition: border-color 0.2s;
+[data-testid="stSidebar"] .stCaption {
+    color: #7a8499 !important; font-size: 12px;
 }
-[data-testid="metric-container"]:hover { border-color: rgba(192,160,98,0.38); }
+[data-testid="stSidebar"] h2 {
+    color: #1a3271 !important; font-size: 13px !important;
+    font-weight: 700 !important; letter-spacing: 0.09em !important; text-transform: uppercase;
+}
+
+/* ── Metric cards — white with shadow ── */
+[data-testid="metric-container"] {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 22px 26px;
+    border: 1px solid rgba(0,0,0,0.07);
+    box-shadow: 0 2px 12px rgba(26,50,113,0.07), 0 1px 3px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s, transform 0.15s;
+}
+[data-testid="metric-container"]:hover {
+    box-shadow: 0 6px 24px rgba(26,50,113,0.12);
+    transform: translateY(-1px);
+}
 [data-testid="stMetricLabel"] > div {
-    color: #6b7485 !important; font-size: 11px !important;
+    color: #9aa3b8 !important; font-size: 11px !important;
     font-weight: 600 !important; letter-spacing: 0.1em !important; text-transform: uppercase;
 }
 [data-testid="stMetricValue"] > div {
-    color: #00c48c !important; font-size: 28px !important;
-    font-weight: 700 !important; letter-spacing: -0.02em !important;
+    color: #009a5c !important; font-size: 28px !important;
+    font-weight: 800 !important; letter-spacing: -0.03em !important;
 }
 
 /* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
     background: transparent !important;
-    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    border-bottom: 1px solid rgba(0,0,0,0.08) !important;
     gap: 0 !important;
 }
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
-    color: #555e72 !important;
-    font-size: 12px !important; font-weight: 600 !important;
-    letter-spacing: 0.07em !important; text-transform: uppercase !important;
+    color: #9aa3b8 !important;
+    font-size: 11px !important; font-weight: 700 !important;
+    letter-spacing: 0.09em !important; text-transform: uppercase !important;
     border: none !important; border-radius: 0 !important;
-    padding: 12px 20px !important;
+    padding: 12px 22px !important;
 }
 .stTabs [aria-selected="true"] {
-    color: #c0a062 !important;
-    border-bottom: 2px solid #c0a062 !important;
+    color: #1a3271 !important;
+    border-bottom: 2px solid #1a3271 !important;
     background: transparent !important;
 }
 
-/* ── Section headings ── */
+/* ── Headings ── */
 [data-testid="stMarkdownContainer"] h1 {
-    font-size: 22px !important; font-weight: 700 !important;
-    color: #e8eaf0 !important; letter-spacing: -0.02em !important;
+    font-size: 24px !important; font-weight: 800 !important;
+    color: #1a2744 !important; letter-spacing: -0.03em !important;
 }
 [data-testid="stMarkdownContainer"] h2,
 [data-testid="stMarkdownContainer"] h3 {
-    font-size: 13px !important; font-weight: 600 !important;
-    color: #c0a062 !important; letter-spacing: 0.08em !important;
+    font-size: 11px !important; font-weight: 700 !important;
+    color: #9aa3b8 !important; letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
 }
-
-/* ── Subheaders ── */
 [data-testid="stHeadingWithActionElements"] h2,
 [data-testid="stHeadingWithActionElements"] h3 {
-    color: #9aa3b5 !important; font-size: 13px !important;
-    font-weight: 600 !important; letter-spacing: 0.06em !important; text-transform: uppercase;
+    color: #9aa3b8 !important; font-size: 11px !important;
+    font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase;
 }
 
-/* ── Download / action buttons ── */
+/* ── Buttons ── */
 div.stDownloadButton > button, div.stButton > button {
-    background: linear-gradient(135deg, #1a2d50 0%, #162645 100%) !important;
-    color: #c0a062 !important; border: 1px solid rgba(192,160,98,0.35) !important;
+    background: #1a3271 !important;
+    color: #ffffff !important; border: none !important;
     border-radius: 8px; font-weight: 600; font-size: 12px;
-    letter-spacing: 0.06em; padding: 10px 24px; width: 100%;
+    letter-spacing: 0.05em; padding: 10px 24px; width: 100%;
+    box-shadow: 0 2px 8px rgba(26,50,113,0.25);
     transition: all 0.2s;
 }
 div.stDownloadButton > button:hover, div.stButton > button:hover {
-    background: linear-gradient(135deg, #1f3560 0%, #1a2e52 100%) !important;
-    border-color: rgba(192,160,98,0.65) !important;
+    background: #1e3d8f !important;
+    box-shadow: 0 4px 16px rgba(26,50,113,0.35) !important;
+    transform: translateY(-1px);
 }
 
-/* ── Radio (language switcher) ── */
+/* ── Radio (language) ── */
 div[data-testid="stRadio"] > label {
-    color: #6b7485 !important; font-size: 11px !important;
-    font-weight: 600 !important; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #7a8499 !important; font-size: 11px !important;
+    font-weight: 700 !important; letter-spacing: 0.09em; text-transform: uppercase;
 }
-div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { color: #9aa3b5 !important; }
+div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { color: #1a2744 !important; }
 
 /* ── Sliders ── */
 [data-testid="stSlider"] [data-testid="stTickBarMin"],
-[data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #4a5168 !important; }
-[data-testid="stSlider"] > div > div > div > div { background: #c0a062 !important; }
+[data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #b0b8cc !important; }
+[data-testid="stSlider"] > div > div > div > div { background: #1a3271 !important; }
 
 /* ── Dataframes ── */
-[data-testid="stDataFrame"] { border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden; }
-[data-testid="stDataFrame"] th { background: #0b1320 !important; color: #6b7485 !important;
-    font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.08em; text-transform: uppercase; }
-[data-testid="stDataFrame"] td { color: #c0c8d8 !important; font-size: 13px !important; }
+[data-testid="stDataFrame"] {
+    border: 1px solid rgba(0,0,0,0.07); border-radius: 10px;
+    overflow: hidden; background: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+}
+[data-testid="stDataFrame"] th {
+    background: #f8f6f2 !important; color: #9aa3b8 !important;
+    font-size: 10px !important; font-weight: 700 !important;
+    letter-spacing: 0.1em; text-transform: uppercase;
+}
+[data-testid="stDataFrame"] td { color: #1a2744 !important; font-size: 13px !important; }
 
-/* ── Code blocks (passport) ── */
-[data-testid="stCode"] { background: #0a111e !important; border: 1px solid rgba(192,160,98,0.12); border-radius: 8px; }
-[data-testid="stCode"] code { color: #8fbc9a !important; font-size: 12px !important; }
+/* ── Code (passport) ── */
+[data-testid="stCode"] {
+    background: #f8f6f2 !important;
+    border: 1px solid rgba(0,0,0,0.07); border-radius: 10px;
+}
+[data-testid="stCode"] code { color: #1a3271 !important; font-size: 12px !important; }
+
+/* ── Info boxes ── */
+[data-testid="stAlert"] {
+    background: #eef2fb !important; border: 1px solid rgba(26,50,113,0.15) !important;
+    border-radius: 10px; color: #1a3271 !important;
+}
 
 /* ── Horizontal rule ── */
-hr { border-color: rgba(255,255,255,0.06) !important; }
+hr { border-color: rgba(0,0,0,0.07) !important; }
 
-/* ── Gold accent strip on top ── */
+/* ── Navy top accent bar ── */
 .stApp::before {
     content: "";
-    position: fixed; top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #c0a062, #d4b87a, #c0a062, transparent);
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #1a3271 0%, #2a52a0 50%, #c0a062 100%);
     z-index: 9999;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Chart colour palette (institutional dark) ──────────────────────────────
+# ── Chart colour palette (light institutional) ─────────────────────────────
 _C = dict(
-    gold="#c0a062", blue="#1565d8", green="#00c48c",
-    red="#d63231",  purple="#7c5cbf", amber="#e8a020",
-    teal="#00968a",
+    navy="#1a3271", green="#009a5c", gold="#c0a062",
+    red="#c0392b",  purple="#6c5ce7", amber="#d4860a",
+    blue="#2563eb", teal="#0d9488",
 )
 CHART_LAYOUT = dict(
-    plot_bgcolor="rgba(8,12,22,0)",
-    paper_bgcolor="rgba(8,12,22,0)",
-    font=dict(family="Inter, sans-serif", color="#8b92a5", size=11),
+    plot_bgcolor="rgba(255,255,255,0)",
+    paper_bgcolor="rgba(255,255,255,0)",
+    font=dict(family="Inter, sans-serif", color="#9aa3b8", size=11),
     margin=dict(l=10, r=10, t=36, b=10),
     xaxis=dict(
-        gridcolor="rgba(255,255,255,0.04)", gridwidth=1,
-        linecolor="rgba(255,255,255,0.08)",
-        tickfont=dict(color="#555e72", size=10),
+        gridcolor="rgba(0,0,0,0.05)", gridwidth=1,
+        linecolor="rgba(0,0,0,0.08)", zeroline=False,
+        tickfont=dict(color="#b0b8cc", size=10),
     ),
     yaxis=dict(
-        gridcolor="rgba(255,255,255,0.04)", gridwidth=1,
-        linecolor="rgba(255,255,255,0.08)",
-        tickfont=dict(color="#555e72", size=10),
+        gridcolor="rgba(0,0,0,0.05)", gridwidth=1,
+        linecolor="rgba(0,0,0,0.08)", zeroline=False,
+        tickfont=dict(color="#b0b8cc", size=10),
     ),
     legend=dict(
-        bgcolor="rgba(0,0,0,0)", font=dict(color="#6b7485", size=10),
-        bordercolor="rgba(255,255,255,0.06)", borderwidth=1,
+        bgcolor="rgba(255,255,255,0.8)",
+        font=dict(color="#7a8499", size=10),
+        bordercolor="rgba(0,0,0,0.06)", borderwidth=1,
     ),
 )
 
@@ -292,17 +316,18 @@ except Exception:
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div style="display:flex;align-items:baseline;gap:16px;margin-bottom:4px;">'
-    '<span style="font-size:22px;font-weight:700;color:#e8eaf0;letter-spacing:-0.02em;">'
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">'
+    '<span style="font-size:24px;font-weight:800;color:#1a2744;letter-spacing:-0.03em;">'
     + t(lang, "app_title") +
     '</span>'
-    '<span style="font-size:12px;font-weight:600;color:#c0a062;letter-spacing:0.12em;'
-    'text-transform:uppercase;margin-left:8px;">INSTITUTIONAL</span>'
+    '<span style="font-size:10px;font-weight:700;color:#ffffff;letter-spacing:0.12em;'
+    'text-transform:uppercase;background:#1a3271;border-radius:4px;padding:3px 8px;">'
+    'INSTITUTIONAL</span>'
     '</div>'
-    '<div style="font-size:12px;color:#555e72;font-weight:500;letter-spacing:0.04em;margin-bottom:20px;">'
-    '<span style="color:#c0a062;">◆</span>&nbsp;&nbsp;'
-    + company_name +
-    '&nbsp;&nbsp;<span style="color:#2a3145;">|</span>&nbsp;&nbsp;'
+    '<div style="font-size:12px;color:#9aa3b8;font-weight:500;letter-spacing:0.03em;margin-bottom:20px;">'
+    '<span style="color:#c0a062;font-size:10px;">◆</span>&nbsp;&nbsp;'
+    '<span style="color:#1a2744;font-weight:600;">' + company_name + '</span>'
+    '&nbsp;&nbsp;<span style="color:#dde0e8;">|</span>&nbsp;&nbsp;'
     + t(lang, "app_subtitle") +
     '</div>',
     unsafe_allow_html=True,
@@ -342,13 +367,13 @@ with tab1:
     fig_wf = go.Figure(go.Waterfall(
         name="ROI", orientation="v",
         measure=measures, x=labels, y=values,
-        connector=dict(line=dict(color="rgba(192,160,98,0.25)", width=1)),
+        connector=dict(line=dict(color="rgba(26,50,113,0.18)", width=1)),
         increasing=dict(marker_color=_C["green"]),
         decreasing=dict(marker_color=_C["red"]),
-        totals=dict(marker_color=_C["blue"]),
+        totals=dict(marker_color=_C["navy"]),
         texttemplate="%{y:,.0f} €",
         textposition="outside",
-        textfont=dict(color="#8b92a5", size=10),
+        textfont=dict(color="#7a8499", size=10),
     ))
     fig_wf.update_layout(showlegend=False, height=420, **CHART_LAYOUT)
     st.plotly_chart(fig_wf, width="stretch")
@@ -364,11 +389,11 @@ with tab1:
         fig_pie = go.Figure(go.Pie(
             labels=pie_labels, values=pie_vals, hole=0.5,
             marker=dict(
-                colors=[_C["green"], _C["blue"], _C["purple"], _C["amber"]],
-                line=dict(color="rgba(8,12,22,0.8)", width=2),
+                colors=[_C["green"], _C["navy"], _C["purple"], _C["amber"]],
+                line=dict(color="rgba(240,236,228,1)", width=2),
             ),
             textinfo="label+percent",
-            textfont=dict(color="#9aa3b5", size=11),
+            textfont=dict(color="#4a5168", size=11),
         ))
         fig_pie.update_layout(height=360, **CHART_LAYOUT)
         st.plotly_chart(fig_pie, width="stretch")
@@ -395,7 +420,7 @@ with tab2:
               node=graph_res.bottleneck_node, score=graph_res.bottleneck_score))
 
     nodes = list(graph_res.betweenness.keys())
-    node_colors = [_C["red"] if n == graph_res.bottleneck_node else _C["blue"] for n in nodes]
+    node_colors = [_C["red"] if n == graph_res.bottleneck_node else _C["navy"] for n in nodes]
     node_sizes  = [22 + graph_res.betweenness[n] * 200 for n in nodes]
 
     angle_step = 2 * np.pi / max(len(nodes), 1)
@@ -410,7 +435,7 @@ with tab2:
     fig_g = go.Figure()
     fig_g.add_trace(go.Scatter(
         x=edge_x, y=edge_y, mode="lines",
-        line=dict(color="rgba(192,160,98,0.18)", width=1.5),
+        line=dict(color="rgba(26,50,113,0.15)", width=1.5),
         hoverinfo="none",
     ))
     fig_g.add_trace(go.Scatter(
@@ -419,9 +444,9 @@ with tab2:
         mode="markers+text",
         text=nodes,
         textposition="top center",
-        textfont=dict(color="#c0c8d8", size=11),
+        textfont=dict(color="#1a2744", size=11),
         marker=dict(color=node_colors, size=node_sizes,
-                    line=dict(color="rgba(255,255,255,0.15)", width=1.5)),
+                    line=dict(color="rgba(255,255,255,0.9)", width=2)),
         hovertemplate="%{text}<br>" + t(lang, "centrality_col") + ": %{customdata:.4f}<extra></extra>",
         customdata=[graph_res.betweenness[n] for n in nodes],
     ))
@@ -470,16 +495,16 @@ with tab3:
     fig_tl.add_trace(go.Scatter(
         x=months_range, y=cumulative, mode="lines+markers",
         name=t(lang, "cumulative_roi"),
-        line=dict(color=_C["blue"], width=2.5),
-        marker=dict(size=5, color=_C["gold"],
-                    line=dict(color=_C["blue"], width=1.5)),
+        line=dict(color=_C["navy"], width=2.5),
+        marker=dict(size=5, color=_C["navy"],
+                    line=dict(color="#ffffff", width=2)),
         fill="tozeroy",
-        fillcolor="rgba(21,101,216,0.08)",
+        fillcolor="rgba(26,50,113,0.07)",
     ))
     fig_tl.add_trace(go.Scatter(
         x=months_range, y=breakeven_line, mode="lines",
         name=t(lang, "breakeven"),
-        line=dict(color=_C["gold"], width=1.5, dash="dash"),
+        line=dict(color=_C["gold"], width=1.5, dash="dot"),
     ))
     fig_tl.update_layout(
         xaxis_title=t(lang, "month_label"),
@@ -522,13 +547,13 @@ with tab4:
         x=x * 100, y=y_prior, mode="lines",
         name=t(lang, "prior_label"),
         line=dict(color=_C["gold"], width=2),
-        fill="tozeroy", fillcolor="rgba(192,160,98,0.07)",
+        fill="tozeroy", fillcolor="rgba(192,160,98,0.10)",
     ))
     fig_b.add_trace(go.Scatter(
         x=x * 100, y=y_post, mode="lines",
         name=t(lang, "posterior_label"),
-        line=dict(color=_C["blue"], width=2.5),
-        fill="tozeroy", fillcolor="rgba(21,101,216,0.12)",
+        line=dict(color=_C["navy"], width=2.5),
+        fill="tozeroy", fillcolor="rgba(26,50,113,0.10)",
     ))
     fig_b.update_layout(
         xaxis_title=t(lang, "probability_pct"),
