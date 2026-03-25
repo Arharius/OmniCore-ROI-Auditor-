@@ -274,6 +274,9 @@ def run_dashboard():
         min-height: unset !important;
         height: auto !important;
         line-height: 1.3 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
         box-shadow: none !important;
     }
     [data-testid="stSidebar"] div.stButton > button:hover {
@@ -438,30 +441,39 @@ def run_dashboard():
                 t(lang, "csv_label"), type=["csv"], help=t(lang, "csv_help"), key="csv_file"
             )
 
+        _slider_defaults = {
+            "manual_hours": 320, "automation_rate": 86, "hour_rate": 12,
+            "error_before": 8.5, "error_after": 1.2, "cost_per_error": 95, "volume": 600,
+            "cycle_before": 21, "cycle_after": 9, "deals_month": 25, "deal_value": 700,
+            "p_before": 74, "p_after": 96, "impl_cost": 14000,
+        }
+        for _k, _v in _slider_defaults.items():
+            st.session_state.setdefault(_k, _v)
+
         st.markdown("---")
         st.markdown(t(lang, "labor_section"))
-        manual_hours    = st.slider(t(lang, "manual_hours"),   50,   600, 320,       key="manual_hours")
-        automation_rate = st.slider(t(lang, "automation_pct"), 50,    95,  86,       key="automation_rate")
-        hour_rate       = st.slider(t(lang, "hour_rate"),       8,    30,  12,       key="hour_rate")
+        manual_hours    = st.slider(t(lang, "manual_hours"),   50,   600,       key="manual_hours")
+        automation_rate = st.slider(t(lang, "automation_pct"), 50,    95,       key="automation_rate")
+        hour_rate       = st.slider(t(lang, "hour_rate"),       8,    30,       key="hour_rate")
 
         st.markdown(t(lang, "errors_section"))
-        error_before   = st.slider(t(lang, "error_before"),  1.0, 20.0,  8.5, step=0.1, key="error_before")
-        error_after    = st.slider(t(lang, "error_after"),   0.1,  5.0,  1.2, step=0.1, key="error_after")
-        cost_per_error = st.slider(t(lang, "cost_per_error"), 20,  500,   95,       key="cost_per_error")
-        volume         = st.slider(t(lang, "volume"),        100, 2000,  600,       key="volume")
+        error_before   = st.slider(t(lang, "error_before"),  1.0, 20.0, step=0.1, key="error_before")
+        error_after    = st.slider(t(lang, "error_after"),   0.1,  5.0, step=0.1, key="error_after")
+        cost_per_error = st.slider(t(lang, "cost_per_error"), 20,  500,          key="cost_per_error")
+        volume         = st.slider(t(lang, "volume"),        100, 2000,          key="volume")
 
         st.markdown(t(lang, "cycle_section"))
-        cycle_before = st.slider(t(lang, "cycle_before"),  5,  60, 21,             key="cycle_before")
-        cycle_after  = st.slider(t(lang, "cycle_after"),   1,  30,  9,             key="cycle_after")
-        deals        = st.slider(t(lang, "deals_month"),   5, 200, 25,              key="deals_month")
-        deal_value   = st.slider(t(lang, "deal_value"),  100, 15000, 700, step=100, key="deal_value")
+        cycle_before = st.slider(t(lang, "cycle_before"),  5,  60,              key="cycle_before")
+        cycle_after  = st.slider(t(lang, "cycle_after"),   1,  30,              key="cycle_after")
+        deals        = st.slider(t(lang, "deals_month"),   5, 200,              key="deals_month")
+        deal_value   = st.slider(t(lang, "deal_value"),  100, 15000, step=100,  key="deal_value")
 
         st.markdown(t(lang, "proba_section"))
-        p_before = st.slider(t(lang, "p_before"), 50,  95, 74, key="p_before")
-        p_after  = st.slider(t(lang, "p_after"),  70,  99, 96, key="p_after")
+        p_before = st.slider(t(lang, "p_before"), 50,  95, key="p_before")
+        p_after  = st.slider(t(lang, "p_after"),  70,  99, key="p_after")
 
         st.markdown(t(lang, "invest_section"))
-        impl_cost = st.slider(t(lang, "impl_cost"), 5000, 100000, 14000, step=1000, key="impl_cost")
+        impl_cost = st.slider(t(lang, "impl_cost"), 5000, 100000, step=1000, key="impl_cost")
 
         st.markdown("---")
         st.caption(t(lang, "footer"))
