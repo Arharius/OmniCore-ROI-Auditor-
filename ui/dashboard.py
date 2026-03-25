@@ -264,6 +264,63 @@ hr { border: none !important; border-top: 1px solid rgba(0,0,0,0.08) !important;
 </style>
 """, unsafe_allow_html=True)
 
+# ── Demo presets ──────────────────────────────────────────────────────────────
+DEMO_PRESETS = {
+    "logistics": {
+        "labels": {"en": "🚛 Logistics", "ru": "🚛 Логистика", "sr": "🚛 Logistika"},
+        "desc":   {"en": "Logistics / Distribution — 480 manual hrs/mo, 1 200 deals",
+                   "ru": "Логистика / Дистрибуция — 480 ручных ч/мес, 1 200 сделок",
+                   "sr": "Logistika / Distribucija — 480 ručnih h/mes., 1 200 poslova"},
+        "company_name": "LogiTrans Srbija d.o.o.",
+        "manual_hours": 480, "automation_rate": 78, "hour_rate": 14,
+        "error_before": 12.0, "error_after": 2.0, "cost_per_error": 180, "volume": 1200,
+        "cycle_before": 14, "cycle_after": 6, "deals_month": 80, "deal_value": 850,
+        "p_before": 68, "p_after": 91, "impl_cost": 22000,
+    },
+    "agency": {
+        "labels": {"en": "🎯 Agency", "ru": "🎯 Агентство", "sr": "🎯 Agencija"},
+        "desc":   {"en": "Marketing Agency — 280 hrs/mo, avg deal 3 500 €",
+                   "ru": "Маркетинговое агентство — 280 ч/мес, ср. сделка 3 500 €",
+                   "sr": "Marketing agencija — 280 h/mes., prosečan posao 3 500 €"},
+        "company_name": "Creative Agency Moscow",
+        "manual_hours": 280, "automation_rate": 72, "hour_rate": 28,
+        "error_before": 6.5, "error_after": 0.8, "cost_per_error": 120, "volume": 400,
+        "cycle_before": 30, "cycle_after": 12, "deals_month": 15, "deal_value": 3500,
+        "p_before": 65, "p_after": 88, "impl_cost": 18000,
+    },
+    "saas": {
+        "labels": {"en": "💻 B2B SaaS", "ru": "💻 B2B SaaS", "sr": "💻 B2B SaaS"},
+        "desc":   {"en": "B2B SaaS / Tech — 45-day sales cycle, avg deal 5 000 €",
+                   "ru": "B2B SaaS / Технологии — цикл 45 дн., ср. сделка 5 000 €",
+                   "sr": "B2B SaaS / Tehnologija — ciklus 45 dana, prosečan posao 5 000 €"},
+        "company_name": "TechFlow Solutions",
+        "manual_hours": 200, "automation_rate": 90, "hour_rate": 30,
+        "error_before": 5.0, "error_after": 0.5, "cost_per_error": 250, "volume": 300,
+        "cycle_before": 45, "cycle_after": 18, "deals_month": 12, "deal_value": 5000,
+        "p_before": 62, "p_after": 88, "impl_cost": 35000,
+    },
+}
+_DEMO_KEYS = ["manual_hours", "automation_rate", "hour_rate",
+              "error_before", "error_after", "cost_per_error", "volume",
+              "cycle_before", "cycle_after", "deals_month", "deal_value",
+              "p_before", "p_after", "impl_cost"]
+_DEMO_BANNER = {
+    "en": ("Demo mode", "{desc}", "Adjust sliders on the left or pick another preset to explore."),
+    "ru": ("Демо-режим", "{desc}", "Меняйте параметры слева или выберите другой кейс для сравнения."),
+    "sr": ("Demo režim", "{desc}", "Prilagodite parametre levo ili izaberite drugi slučaj."),
+}
+
+def _apply_preset(preset_key):
+    p = DEMO_PRESETS[preset_key]
+    st.session_state["demo_preset"] = preset_key
+    st.session_state["company_name"] = p["company_name"]
+    for k in _DEMO_KEYS:
+        st.session_state[k] = p[k]
+
+def _clear_demo():
+    st.session_state.pop("demo_preset", None)
+
+
 # ── Chart colour palette (Apple HIG) ──────────────────────────────────────
 _C = dict(
     navy="#0071E3", green="#34C759", gold="#FF9F0A",
@@ -306,6 +363,40 @@ with st.sidebar:
         key="lang_select",
     )
 
+    # ── Demo preset switcher ───────────────────────────────────────────────
+    _demo_labels = {
+        "en": ("🎭 Demo presets", "▶ Run live audit"),
+        "ru": ("🎭 Демо-кейсы", "▶ Живой аудит"),
+        "sr": ("🎭 Demo slučajevi", "▶ Živi audit"),
+    }
+    st.markdown(
+        f'<div style="font-size:12px;font-weight:600;color:#6E6E73;'
+        f'letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;">'
+        f'{_demo_labels[lang][0]}</div>',
+        unsafe_allow_html=True,
+    )
+    _active = st.session_state.get("demo_preset")
+    _dc1, _dc2, _dc3 = st.columns(3)
+    _styles = {k: ("background:#0071E3;color:#fff;" if _active == k
+                   else "background:#F5F5F7;color:#1D1D1F;") for k in DEMO_PRESETS}
+    if _dc1.button(DEMO_PRESETS["logistics"]["labels"][lang],
+                   key="btn_logistics", use_container_width=True):
+        _apply_preset("logistics")
+        st.rerun()
+    if _dc2.button(DEMO_PRESETS["agency"]["labels"][lang],
+                   key="btn_agency", use_container_width=True):
+        _apply_preset("agency")
+        st.rerun()
+    if _dc3.button(DEMO_PRESETS["saas"]["labels"][lang],
+                   key="btn_saas", use_container_width=True):
+        _apply_preset("saas")
+        st.rerun()
+    if _active:
+        if st.button(_demo_labels[lang][1], key="btn_live", use_container_width=True):
+            _clear_demo()
+            st.rerun()
+
+    st.markdown("---")
     st.markdown("## " + t(lang, "sidebar_title"))
 
     company_name = st.text_input(t(lang, "company_label"), value="Marteco Digital Services",
@@ -418,6 +509,30 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True,
 )
+
+# ── Demo banner ───────────────────────────────────────────────────────────────
+_active_preset = st.session_state.get("demo_preset")
+if _active_preset and _active_preset in DEMO_PRESETS:
+    _p_data = DEMO_PRESETS[_active_preset]
+    _b_title, _b_desc_tpl, _b_hint = _DEMO_BANNER[lang]
+    _b_desc = _b_desc_tpl.format(desc=_p_data["desc"][lang])
+    _label  = _p_data["labels"][lang]
+    st.markdown(
+        f'<div style="display:flex;align-items:flex-start;gap:14px;'
+        f'background:linear-gradient(135deg,rgba(0,113,227,0.07) 0%,rgba(52,199,89,0.06) 100%);'
+        f'border:1px solid rgba(0,113,227,0.18);border-radius:16px;'
+        f'padding:14px 20px;margin-bottom:16px;">'
+        f'<div style="flex-shrink:0;background:#0071E3;color:#fff;font-size:11px;'
+        f'font-weight:700;letter-spacing:0.06em;padding:3px 10px;border-radius:980px;'
+        f'margin-top:2px;white-space:nowrap;">DEMO</div>'
+        f'<div>'
+        f'<div style="font-size:14px;font-weight:600;color:#0071E3;margin-bottom:2px;">'
+        f'{_label} — {_b_desc}</div>'
+        f'<div style="font-size:13px;color:#6E6E73;">{_b_hint}</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric(t(lang, "metric_net_roi"),  "{:,.0f} €".format(res.net_roi))
