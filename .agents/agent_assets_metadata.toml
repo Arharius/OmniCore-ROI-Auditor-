@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "6wud_ijNwv-n_V-Tyc6sJ"
+uri = "file://test_passport.pdf"
+type = "pdf"
+title = "ROI Passport — Marteco Digital (тест)"
