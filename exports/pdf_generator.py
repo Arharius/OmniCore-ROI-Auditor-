@@ -44,6 +44,22 @@ S_PURPLE   = _style("sp", fontName="Helvetica-Bold", textColor=PURPLE)
 S_SMALL_C  = _style("smc", fontSize=7, textColor=LIGHT, alignment=TA_CENTER)
 S_LARGE_G  = _style("slg", fontName="Helvetica-Bold", fontSize=14, textColor=GREEN, alignment=TA_CENTER)
 
+# ── Inline styles used inside build_roi_passport_pdf (module-level to avoid
+#    ReportLab's global name-clash on repeated calls / Streamlit rerenders) ──
+S_SRC   = _style("src",  textColor=ACCENT,  alignment=TA_CENTER)
+S_SRC2  = _style("src2", textColor=ACCENT,  alignment=TA_CENTER)
+S_SRM   = _style("srm",  textColor=PURPLE,  alignment=TA_CENTER)
+S_SRM2  = _style("srm2", textColor=PURPLE,  alignment=TA_CENTER)
+S_FL    = _style("fl",   fontName="Helvetica-Bold", fontSize=10, textColor=WHITE)
+S_FV    = _style("fv",   fontName="Helvetica-Bold", fontSize=10, textColor=GREEN,              alignment=TA_RIGHT)
+S_FN    = _style("fn",   fontName="Helvetica-Bold", fontSize=10, textColor=HexColor("#FF6692"), alignment=TA_RIGHT)
+S_FNL   = _style("fnl",  fontName="Helvetica-Bold", fontSize=13, textColor=GREEN)
+S_FNV   = _style("fnv",  fontName="Helvetica-Bold", fontSize=13, textColor=GREEN,              alignment=TA_RIGHT)
+S_SFY   = _style("sfy",  textColor=YELLOW,  fontName="Helvetica-Bold", alignment=TA_CENTER)
+S_MG    = _style("mg",   textColor=ACCENT,  fontName="Helvetica-Bold")
+S_MM    = _style("mm",   textColor=PURPLE,  fontName="Helvetica-Bold")
+S_MB    = _style("mb",   textColor=GREEN,   fontName="Helvetica-Bold")
+
 
 def _p(text, style=None):
     if style is None:
@@ -164,28 +180,28 @@ def build_roi_passport_pdf(
             _p("{} ч/мес".format(manual_hours_before), S_CENTER),
             _p("{:.0f} ч/мес".format(manual_hours_before * (1 - automation_rate_pct / 100)), S_CENTER),
             _p("{:,.0f}".format(time_saved), S_GREEN),
-            _p("[ГРАФ]", _style("src", textColor=ACCENT, alignment=TA_CENTER)),
+            _p("[ГРАФ]", S_SRC),
         ],
         [
             _p("Ошибки процесса", S_LEFT),
             _p("{:.1f}%".format(error_rate_before), S_CENTER),
             _p("{:.1f}%".format(error_rate_after), S_CENTER),
             _p("{:,.0f}".format(error_reduction), S_GREEN),
-            _p("[ГРАФ]", _style("src2", textColor=ACCENT, alignment=TA_CENTER)),
+            _p("[ГРАФ]", S_SRC2),
         ],
         [
             _p("Скорость сделок", S_LEFT),
             _p("{:.0f} дн.".format(deal_cycle_before), S_CENTER),
             _p("{:.0f} дн.".format(deal_cycle_after), S_CENTER),
             _p("{:,.0f}".format(revenue_impact), S_GREEN),
-            _p("[МАРКОВ]", _style("srm", textColor=PURPLE, alignment=TA_CENTER)),
+            _p("[МАРКОВ]", S_SRM),
         ],
         [
             _p("Конверсия сделок", S_LEFT),
             _p("{:.0f}%".format(p_complete_before_pct), S_CENTER),
             _p("{:.0f}%".format(p_complete_after_pct), S_CENTER),
             _p("{:,.0f}".format(markov_gain), S_GREEN),
-            _p("[МАРКОВ]", _style("srm2", textColor=PURPLE, alignment=TA_CENTER)),
+            _p("[МАРКОВ]", S_SRM2),
         ],
     ]
     m_data = [m_hdr] + m_rows
@@ -199,20 +215,14 @@ def build_roi_passport_pdf(
     story.append(Spacer(1, 4 * mm))
 
     # ── 4. FINANCIAL MODEL ────────────────────────────────────────────────────
-    fin_label = _style("fl", fontName="Helvetica-Bold", fontSize=10, textColor=WHITE)
-    fin_val   = _style("fv", fontName="Helvetica-Bold", fontSize=10, textColor=GREEN, alignment=TA_RIGHT)
-    fin_neg   = _style("fn", fontName="Helvetica-Bold", fontSize=10, textColor=HexColor("#FF6692"), alignment=TA_RIGHT)
-    fin_net_l = _style("fnl", fontName="Helvetica-Bold", fontSize=13, textColor=GREEN)
-    fin_net_v = _style("fnv", fontName="Helvetica-Bold", fontSize=13, textColor=GREEN, alignment=TA_RIGHT)
-
     fin_data = [
-        [_p("+ Экономия времени",      fin_label), _p("{:,.0f} EUR".format(time_saved),      fin_val)],
-        [_p("+ Снижение ошибок",       fin_label), _p("{:,.0f} EUR".format(error_reduction),  fin_val)],
-        [_p("+ Выручка (скорость)",    fin_label), _p("{:,.0f} EUR".format(revenue_impact),   fin_val)],
-        [_p("+ Выручка (конверсия)",   fin_label), _p("{:,.0f} EUR".format(markov_gain),      fin_val)],
-        [_p("= Суммарная выгода",      fin_label), _p("{:,.0f} EUR".format(total_benefit),    fin_val)],
-        [_p("− Инвестиции",            fin_label), _p("{:,.0f} EUR".format(implementation_cost), fin_neg)],
-        [_p("= ЧИСТЫЙ ROI",            fin_net_l), _p("{:,.0f} EUR".format(net_roi),          fin_net_v)],
+        [_p("+ Экономия времени",      S_FL), _p("{:,.0f} EUR".format(time_saved),           S_FV)],
+        [_p("+ Снижение ошибок",       S_FL), _p("{:,.0f} EUR".format(error_reduction),       S_FV)],
+        [_p("+ Выручка (скорость)",    S_FL), _p("{:,.0f} EUR".format(revenue_impact),        S_FV)],
+        [_p("+ Выручка (конверсия)",   S_FL), _p("{:,.0f} EUR".format(markov_gain),           S_FV)],
+        [_p("= Суммарная выгода",      S_FL), _p("{:,.0f} EUR".format(total_benefit),         S_FV)],
+        [_p("− Инвестиции",            S_FL), _p("{:,.0f} EUR".format(implementation_cost),   S_FN)],
+        [_p("= ЧИСТЫЙ ROI",            S_FNL), _p("{:,.0f} EUR".format(net_roi),              S_FNV)],
     ]
     fin_ts = _ts_base(bg=GRAY_D, grid=GRAY_D) + [
         ("BACKGROUND",  (0, 4), (-1, 4), DARK_BG),
@@ -235,19 +245,19 @@ def build_roi_passport_pdf(
     ]
     math_rows = [
         [
-            _p("[ГРАФ]", _style("mg", textColor=ACCENT, fontName="Helvetica-Bold")),
+            _p("[ГРАФ]", S_MG),
             _p("Узкое место", S_LEFT),
             _p("{} / {:.4f}".format(bottleneck_node, bottleneck_score), S_CENTER),
             _p("Приоритет оптимизации процесса", S_LEFT),
         ],
         [
-            _p("[МАРКОВ]", _style("mm", textColor=PURPLE, fontName="Helvetica-Bold")),
+            _p("[МАРКОВ]", S_MM),
             _p("P(завершение)", S_LEFT),
             _p("{:.0f}% → {:.0f}%".format(p_complete_before_pct, p_complete_after_pct), S_CENTER),
             _p("Рост конверсии через цепи Маркова", S_LEFT),
         ],
         [
-            _p("[БАЙЕС]", _style("mb", textColor=GREEN, fontName="Helvetica-Bold")),
+            _p("[БАЙЕС]", S_MB),
             _p("Доверие к результату", S_LEFT),
             _p("{:.1f}% → {:.1f}%".format(bayes_prior, bayes_posterior), S_CENTER),
             _p("80% ДИ: {}".format(bayes_ci), S_LEFT),
@@ -275,7 +285,7 @@ def build_roi_passport_pdf(
             _p("Подписка + Success Fee", S_CENTER),
             _p("{:,.0f} EUR".format(success_fee_threshold), S_CENTER),
             _p("{}%".format(success_fee_pct), S_CENTER),
-            _p("{:,.0f} EUR".format(year1_fee), _style("sfy", textColor=YELLOW, fontName="Helvetica-Bold", alignment=TA_CENTER)),
+            _p("{:,.0f} EUR".format(year1_fee), S_SFY),
         ],
     ]
     fee_ts = _ts_base(bg=GRAY_D, grid=ACCENT) + [
