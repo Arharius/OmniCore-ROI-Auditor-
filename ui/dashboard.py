@@ -24,33 +24,159 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-/* Metric cards */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Global ── */
+html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
+
+/* ── App background ── */
+.stApp {
+    background: radial-gradient(ellipse at 20% 0%, #0b1628 0%, #060a11 55%, #050810 100%) !important;
+}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0a111e 0%, #060d18 100%) !important;
+    border-right: 1px solid rgba(192,160,98,0.12) !important;
+}
+[data-testid="stSidebar"] .stMarkdown p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stCaption { color: #8b92a5 !important; font-size: 12px; }
+[data-testid="stSidebar"] h2 { color: #c0a062 !important; font-size: 14px !important;
+    font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase; }
+
+/* ── Metric cards ── */
 [data-testid="metric-container"] {
-    background: #1e2130;
-    border-radius: 10px;
-    padding: 16px 20px;
-    border: 1px solid rgba(99,110,250,0.35);
+    background: linear-gradient(145deg, #0e1828 0%, #0b1320 100%);
+    border-radius: 12px;
+    padding: 20px 24px;
+    border: 1px solid rgba(192,160,98,0.18);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: border-color 0.2s;
+}
+[data-testid="metric-container"]:hover { border-color: rgba(192,160,98,0.38); }
+[data-testid="stMetricLabel"] > div {
+    color: #6b7485 !important; font-size: 11px !important;
+    font-weight: 600 !important; letter-spacing: 0.1em !important; text-transform: uppercase;
 }
 [data-testid="stMetricValue"] > div {
-    color: #00CC96 !important;
-    font-size: 26px !important;
-    font-weight: 700;
+    color: #00c48c !important; font-size: 28px !important;
+    font-weight: 700 !important; letter-spacing: -0.02em !important;
 }
-/* Buttons */
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    gap: 0 !important;
+}
+.stTabs [data-baseweb="tab"] {
+    background: transparent !important;
+    color: #555e72 !important;
+    font-size: 12px !important; font-weight: 600 !important;
+    letter-spacing: 0.07em !important; text-transform: uppercase !important;
+    border: none !important; border-radius: 0 !important;
+    padding: 12px 20px !important;
+}
+.stTabs [aria-selected="true"] {
+    color: #c0a062 !important;
+    border-bottom: 2px solid #c0a062 !important;
+    background: transparent !important;
+}
+
+/* ── Section headings ── */
+[data-testid="stMarkdownContainer"] h1 {
+    font-size: 22px !important; font-weight: 700 !important;
+    color: #e8eaf0 !important; letter-spacing: -0.02em !important;
+}
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 {
+    font-size: 13px !important; font-weight: 600 !important;
+    color: #c0a062 !important; letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+}
+
+/* ── Subheaders ── */
+[data-testid="stHeadingWithActionElements"] h2,
+[data-testid="stHeadingWithActionElements"] h3 {
+    color: #9aa3b5 !important; font-size: 13px !important;
+    font-weight: 600 !important; letter-spacing: 0.06em !important; text-transform: uppercase;
+}
+
+/* ── Download / action buttons ── */
 div.stDownloadButton > button, div.stButton > button {
-    background: linear-gradient(90deg, #636EFA, #00CC96) !important;
-    color: white !important; border: none !important;
-    border-radius: 8px; font-weight: 600; padding: 10px 24px; width: 100%;
+    background: linear-gradient(135deg, #1a2d50 0%, #162645 100%) !important;
+    color: #c0a062 !important; border: 1px solid rgba(192,160,98,0.35) !important;
+    border-radius: 8px; font-weight: 600; font-size: 12px;
+    letter-spacing: 0.06em; padding: 10px 24px; width: 100%;
+    transition: all 0.2s;
 }
-div.stDownloadButton > button:hover, div.stButton > button:hover { opacity: 0.85; }
+div.stDownloadButton > button:hover, div.stButton > button:hover {
+    background: linear-gradient(135deg, #1f3560 0%, #1a2e52 100%) !important;
+    border-color: rgba(192,160,98,0.65) !important;
+}
+
+/* ── Radio (language switcher) ── */
+div[data-testid="stRadio"] > label {
+    color: #6b7485 !important; font-size: 11px !important;
+    font-weight: 600 !important; letter-spacing: 0.08em; text-transform: uppercase;
+}
+div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p { color: #9aa3b5 !important; }
+
+/* ── Sliders ── */
+[data-testid="stSlider"] [data-testid="stTickBarMin"],
+[data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #4a5168 !important; }
+[data-testid="stSlider"] > div > div > div > div { background: #c0a062 !important; }
+
+/* ── Dataframes ── */
+[data-testid="stDataFrame"] { border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden; }
+[data-testid="stDataFrame"] th { background: #0b1320 !important; color: #6b7485 !important;
+    font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.08em; text-transform: uppercase; }
+[data-testid="stDataFrame"] td { color: #c0c8d8 !important; font-size: 13px !important; }
+
+/* ── Code blocks (passport) ── */
+[data-testid="stCode"] { background: #0a111e !important; border: 1px solid rgba(192,160,98,0.12); border-radius: 8px; }
+[data-testid="stCode"] code { color: #8fbc9a !important; font-size: 12px !important; }
+
+/* ── Horizontal rule ── */
+hr { border-color: rgba(255,255,255,0.06) !important; }
+
+/* ── Gold accent strip on top ── */
+.stApp::before {
+    content: "";
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #c0a062, #d4b87a, #c0a062, transparent);
+    z-index: 9999;
+}
 </style>
 """, unsafe_allow_html=True)
 
+# ── Chart colour palette (institutional dark) ──────────────────────────────
+_C = dict(
+    gold="#c0a062", blue="#1565d8", green="#00c48c",
+    red="#d63231",  purple="#7c5cbf", amber="#e8a020",
+    teal="#00968a",
+)
 CHART_LAYOUT = dict(
-    plot_bgcolor="rgba(14,17,23,0.8)",
-    paper_bgcolor="rgba(14,17,23,0)",
-    font_color="#dddddd",
-    margin=dict(l=20, r=20, t=40, b=20),
+    plot_bgcolor="rgba(8,12,22,0)",
+    paper_bgcolor="rgba(8,12,22,0)",
+    font=dict(family="Inter, sans-serif", color="#8b92a5", size=11),
+    margin=dict(l=10, r=10, t=36, b=10),
+    xaxis=dict(
+        gridcolor="rgba(255,255,255,0.04)", gridwidth=1,
+        linecolor="rgba(255,255,255,0.08)",
+        tickfont=dict(color="#555e72", size=10),
+    ),
+    yaxis=dict(
+        gridcolor="rgba(255,255,255,0.04)", gridwidth=1,
+        linecolor="rgba(255,255,255,0.08)",
+        tickfont=dict(color="#555e72", size=10),
+    ),
+    legend=dict(
+        bgcolor="rgba(0,0,0,0)", font=dict(color="#6b7485", size=10),
+        bordercolor="rgba(255,255,255,0.06)", borderwidth=1,
+    ),
 )
 
 # ── SIDEBAR ───────────────────────────────────────────────────────────────────
@@ -165,9 +291,22 @@ except Exception:
     N_mat = None
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
-st.markdown("# " + t(lang, "app_title"))
-st.markdown("**{}** — {}".format(company_name, t(lang, "app_subtitle")))
-st.markdown("---")
+st.markdown(
+    '<div style="display:flex;align-items:baseline;gap:16px;margin-bottom:4px;">'
+    '<span style="font-size:22px;font-weight:700;color:#e8eaf0;letter-spacing:-0.02em;">'
+    + t(lang, "app_title") +
+    '</span>'
+    '<span style="font-size:12px;font-weight:600;color:#c0a062;letter-spacing:0.12em;'
+    'text-transform:uppercase;margin-left:8px;">INSTITUTIONAL</span>'
+    '</div>'
+    '<div style="font-size:12px;color:#555e72;font-weight:500;letter-spacing:0.04em;margin-bottom:20px;">'
+    '<span style="color:#c0a062;">◆</span>&nbsp;&nbsp;'
+    + company_name +
+    '&nbsp;&nbsp;<span style="color:#2a3145;">|</span>&nbsp;&nbsp;'
+    + t(lang, "app_subtitle") +
+    '</div>',
+    unsafe_allow_html=True,
+)
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric(t(lang, "metric_net_roi"),  "{:,.0f} €".format(res.net_roi))
@@ -203,14 +342,15 @@ with tab1:
     fig_wf = go.Figure(go.Waterfall(
         name="ROI", orientation="v",
         measure=measures, x=labels, y=values,
-        connector=dict(line=dict(color="#636EFA", width=1)),
-        increasing=dict(marker_color="#00CC96"),
-        decreasing=dict(marker_color="#EF553B"),
-        totals=dict(marker_color="#636EFA"),
+        connector=dict(line=dict(color="rgba(192,160,98,0.25)", width=1)),
+        increasing=dict(marker_color=_C["green"]),
+        decreasing=dict(marker_color=_C["red"]),
+        totals=dict(marker_color=_C["blue"]),
         texttemplate="%{y:,.0f} €",
         textposition="outside",
+        textfont=dict(color="#8b92a5", size=10),
     ))
-    fig_wf.update_layout(showlegend=False, height=400, **CHART_LAYOUT)
+    fig_wf.update_layout(showlegend=False, height=420, **CHART_LAYOUT)
     st.plotly_chart(fig_wf, width="stretch")
 
     col_p, col_t = st.columns(2)
@@ -222,11 +362,15 @@ with tab1:
         pie_vals   = [res.time_saved_annual, res.error_reduction_annual,
                       res.revenue_impact_annual, res.markov_gain_annual]
         fig_pie = go.Figure(go.Pie(
-            labels=pie_labels, values=pie_vals, hole=0.45,
-            marker=dict(colors=["#00CC96", "#636EFA", "#AB63FA", "#FFA15A"]),
+            labels=pie_labels, values=pie_vals, hole=0.5,
+            marker=dict(
+                colors=[_C["green"], _C["blue"], _C["purple"], _C["amber"]],
+                line=dict(color="rgba(8,12,22,0.8)", width=2),
+            ),
             textinfo="label+percent",
+            textfont=dict(color="#9aa3b5", size=11),
         ))
-        fig_pie.update_layout(height=340, **CHART_LAYOUT)
+        fig_pie.update_layout(height=360, **CHART_LAYOUT)
         st.plotly_chart(fig_pie, width="stretch")
 
     with col_t:
@@ -251,8 +395,8 @@ with tab2:
               node=graph_res.bottleneck_node, score=graph_res.bottleneck_score))
 
     nodes = list(graph_res.betweenness.keys())
-    node_colors = ["#EF553B" if n == graph_res.bottleneck_node else "#636EFA" for n in nodes]
-    node_sizes  = [20 + graph_res.betweenness[n] * 180 for n in nodes]
+    node_colors = [_C["red"] if n == graph_res.bottleneck_node else _C["blue"] for n in nodes]
+    node_sizes  = [22 + graph_res.betweenness[n] * 200 for n in nodes]
 
     angle_step = 2 * np.pi / max(len(nodes), 1)
     pos = {n: (np.cos(i * angle_step), np.sin(i * angle_step)) for i, n in enumerate(nodes)}
@@ -266,7 +410,7 @@ with tab2:
     fig_g = go.Figure()
     fig_g.add_trace(go.Scatter(
         x=edge_x, y=edge_y, mode="lines",
-        line=dict(color="rgba(99,110,250,0.35)", width=1.5),
+        line=dict(color="rgba(192,160,98,0.18)", width=1.5),
         hoverinfo="none",
     ))
     fig_g.add_trace(go.Scatter(
@@ -275,16 +419,17 @@ with tab2:
         mode="markers+text",
         text=nodes,
         textposition="top center",
-        textfont=dict(color="#ffffff", size=12),
+        textfont=dict(color="#c0c8d8", size=11),
         marker=dict(color=node_colors, size=node_sizes,
-                    line=dict(color="white", width=1.5)),
+                    line=dict(color="rgba(255,255,255,0.15)", width=1.5)),
         hovertemplate="%{text}<br>" + t(lang, "centrality_col") + ": %{customdata:.4f}<extra></extra>",
         customdata=[graph_res.betweenness[n] for n in nodes],
     ))
+    _no_axes = {k: v for k, v in CHART_LAYOUT.items() if k not in ("xaxis", "yaxis")}
     fig_g.update_layout(
-        showlegend=False, height=400,
+        showlegend=False, height=420,
         xaxis=dict(visible=False), yaxis=dict(visible=False),
-        **CHART_LAYOUT,
+        **_no_axes,
     )
     st.plotly_chart(fig_g, width="stretch")
 
@@ -325,21 +470,21 @@ with tab3:
     fig_tl.add_trace(go.Scatter(
         x=months_range, y=cumulative, mode="lines+markers",
         name=t(lang, "cumulative_roi"),
-        line=dict(color="#00CC96", width=2.5),
-        marker=dict(size=6, color="#00CC96"),
+        line=dict(color=_C["blue"], width=2.5),
+        marker=dict(size=5, color=_C["gold"],
+                    line=dict(color=_C["blue"], width=1.5)),
         fill="tozeroy",
-        fillcolor="rgba(0,204,150,0.1)",
+        fillcolor="rgba(21,101,216,0.08)",
     ))
     fig_tl.add_trace(go.Scatter(
         x=months_range, y=breakeven_line, mode="lines",
         name=t(lang, "breakeven"),
-        line=dict(color="#EF553B", width=1.5, dash="dash"),
+        line=dict(color=_C["gold"], width=1.5, dash="dash"),
     ))
     fig_tl.update_layout(
         xaxis_title=t(lang, "month_label"),
         yaxis_title="EUR",
-        legend=dict(bgcolor="rgba(0,0,0,0)"),
-        height=380,
+        height=400,
         **CHART_LAYOUT,
     )
     st.plotly_chart(fig_tl, width="stretch")
@@ -376,20 +521,19 @@ with tab4:
     fig_b.add_trace(go.Scatter(
         x=x * 100, y=y_prior, mode="lines",
         name=t(lang, "prior_label"),
-        line=dict(color="#636EFA", width=2.5),
-        fill="tozeroy", fillcolor="rgba(99,110,250,0.15)",
+        line=dict(color=_C["gold"], width=2),
+        fill="tozeroy", fillcolor="rgba(192,160,98,0.07)",
     ))
     fig_b.add_trace(go.Scatter(
         x=x * 100, y=y_post, mode="lines",
         name=t(lang, "posterior_label"),
-        line=dict(color="#00CC96", width=2.5),
-        fill="tozeroy", fillcolor="rgba(0,204,150,0.15)",
+        line=dict(color=_C["blue"], width=2.5),
+        fill="tozeroy", fillcolor="rgba(21,101,216,0.12)",
     ))
     fig_b.update_layout(
         xaxis_title=t(lang, "probability_pct"),
         yaxis_title=t(lang, "density"),
-        legend=dict(bgcolor="rgba(0,0,0,0)"),
-        height=380,
+        height=400,
         **CHART_LAYOUT,
     )
     st.plotly_chart(fig_b, width="stretch")
