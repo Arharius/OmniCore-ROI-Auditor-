@@ -23,6 +23,7 @@ class ROIInput:
     implementation_cost_eur: float
     positive_signals: int = 4
     total_signals: int = 5
+    pipeline_utilization_pct: float = 30.0
 
 
 @dataclass
@@ -57,7 +58,8 @@ class ROIEngine:
         time_saved = inp.manual_hours_per_month * inp.automation_rate * 12 * inp.hour_rate_eur
         error_saved = ((inp.error_rate_before_pct - inp.error_rate_after_pct) / 100) * inp.monthly_volume * 12 * inp.cost_per_error_eur
         velocity = (inp.deal_cycle_before_days - inp.deal_cycle_after_days) / inp.deal_cycle_before_days if inp.deal_cycle_before_days else 0.0
-        revenue_impact = inp.deals_per_month * velocity * 0.30 * 12 * inp.avg_deal_value_eur
+        pipeline_util = getattr(inp, "pipeline_utilization_pct", 30.0) / 100.0
+        revenue_impact = inp.deals_per_month * velocity * pipeline_util * 12 * inp.avg_deal_value_eur
         markov_gain = inp.deals_per_month * ((1 - inp.p_complete_before) - (1 - inp.p_complete_after)) * inp.avg_deal_value_eur * 12
         total = time_saved + error_saved + revenue_impact + markov_gain
         net_roi = total - inp.implementation_cost_eur

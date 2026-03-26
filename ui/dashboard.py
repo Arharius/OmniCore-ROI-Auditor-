@@ -16,6 +16,7 @@ import dataclasses
 
 from core.math_engine import MathEngine
 from core.roi_engine import ROIEngine, ROIInput, ROIResult
+from core.advanced_analytics import run_monte_carlo, run_tornado, compute_npv_irr
 from etl.extractor import MatrixExtractor
 from exports.pdf_generator import build_roi_passport_pdf
 from ui.i18n import TRANSLATIONS, LANG_NAMES, t
@@ -476,7 +477,7 @@ def run_dashboard():
             "manual_hours": 320, "automation_rate": 86, "hour_rate": 12,
             "error_before": 8.5, "error_after": 1.2, "cost_per_error": 95, "volume": 600,
             "cycle_before": 21, "cycle_after": 9, "deals_month": 25, "deal_value": 700,
-            "p_before": 74, "p_after": 96, "impl_cost": 14000,
+            "p_before": 74, "p_after": 96, "impl_cost": 14000, "pipeline_util": 30,
         }
         for _k, _v in _slider_defaults.items():
             st.session_state.setdefault(_k, _v)
@@ -504,7 +505,11 @@ def run_dashboard():
         p_after  = st.slider(t(lang, "p_after"),  70,  99, key="p_after")
 
         st.markdown(t(lang, "invest_section"))
-        impl_cost = st.slider(t(lang, "impl_cost"), 5000, 100000, step=1000, key="impl_cost")
+        impl_cost    = st.slider(t(lang, "impl_cost"), 5000, 100000, step=1000, key="impl_cost")
+        pipeline_util = st.slider(
+            t(lang, "pipeline_util"), 10, 60, key="pipeline_util",
+            help=t(lang, "pipeline_util_help"),
+        )
 
         st.markdown("---")
 
@@ -559,6 +564,7 @@ def run_dashboard():
         implementation_cost_eur=float(impl_cost),
         positive_signals=4,
         total_signals=5,
+        pipeline_utilization_pct=float(pipeline_util),
     )
 
     bayes_res = math_eng.bayesian_update(inp.positive_signals, inp.total_signals)
@@ -679,12 +685,27 @@ def run_dashboard():
     c3.metric(t(lang, "metric_bayes"), "{:.1f}%".format(res.bayesian_posterior_pct))
     c4.metric(t(lang, "metric_impl"), _fmt(impl_cost, currency))
 
+    _risk_adj_val = res.net_roi * (res.bayesian_posterior_pct / 100.0)
+    st.markdown(
+        '<div style="background:linear-gradient(90deg,#F5F5F7,#EEF5FF);'
+        'border-radius:12px;padding:10px 18px;margin:8px 0 0 0;'
+        'border-left:4px solid #0071E3;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
+        '<span style="font-size:12px;font-weight:600;color:#6E6E73;text-transform:uppercase;'
+        'letter-spacing:0.07em;">' + t(lang, "risk_adj_roi") + '</span>&nbsp;&nbsp;'
+        '<span style="font-size:20px;font-weight:700;color:#0071E3;">'
+        + _fmt(_risk_adj_val, currency) + '</span>&nbsp;'
+        '<span style="font-size:12px;color:#AEAEB2;">'
+        + t(lang, "risk_adj_formula", val=_risk_adj_val) + '</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
     st.markdown("---")
 
     # ── TABS ───────────────────────────────────────────────────────────────────
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         t(lang, "tab_roi"), t(lang, "tab_graph"), t(lang, "tab_markov"),
-        t(lang, "tab_bayes"), t(lang, "tab_passport"),
+        t(lang, "tab_bayes"), t(lang, "tab_passport"), t(lang, "tab_precision"),
     ])
 
     # ── TAB 1: ROI BREAKDOWN ───────────────────────────────────────────────────
@@ -975,3 +996,185 @@ def run_dashboard():
                           company=company_name, roi=res.net_roi,
                           roi_pct=res.roi_pct, payback=res.payback_months)
         st.text_area(t(lang, "linkedin_label"), value=linkedin_text, height=110, key="linkedin_ta")
+
+    # ── TAB 6: PRECISION ANALYSIS ─────────────────────────────────────────────
+    with tab6:
+
+        # ── TORNADO CHART ────────────────────────────────────────────────────
+        st.subheader(t(lang, "tornado_title"))
+        _tornado = run_tornado(inp, delta=0.20)
+
+        _param_label_map = {
+            "en": {
+                "manual_hours": "Manual hours/mo",
+                "automation_rate": "Automation %",
+                "hour_rate": "Hour rate €",
+                "cost_per_error": "Cost per error €",
+                "deal_value": "Avg deal value €",
+                "deals_per_month": "Deals/month",
+                "cycle_improvement": "Cycle improvement",
+                "p_uplift": "Completion prob. uplift",
+            },
+            "ru": {
+                "manual_hours": "Ручные часы/мес",
+                "automation_rate": "Автоматизация %",
+                "hour_rate": "Ставка €/ч",
+                "cost_per_error": "Стоимость ошибки €",
+                "deal_value": "Ср. сделка €",
+                "deals_per_month": "Сделок/мес",
+                "cycle_improvement": "Улучшение цикла",
+                "p_uplift": "Прирост вероятности",
+            },
+            "sr": {
+                "manual_hours": "Ručni sati/mes.",
+                "automation_rate": "Automatizacija %",
+                "hour_rate": "Stopa €/h",
+                "cost_per_error": "Trošak greške €",
+                "deal_value": "Prosečan posao €",
+                "deals_per_month": "Poslova/mes.",
+                "cycle_improvement": "Poboljšanje ciklusa",
+                "p_uplift": "Porast verovatnoće",
+            },
+        }
+        _pm = _param_label_map.get(lang, _param_label_map["en"])
+        _t_labels = [_pm.get(p, p) for p in _tornado.params]
+
+        _t_fig = go.Figure()
+        _t_fig.add_trace(go.Bar(
+            y=_t_labels,
+            x=[l - _tornado.base_roi for l in _tornado.roi_low],
+            orientation="h",
+            name="-20%",
+            marker_color="#FF3B30",
+            base=_tornado.base_roi,
+        ))
+        _t_fig.add_trace(go.Bar(
+            y=_t_labels,
+            x=[h - _tornado.base_roi for h in _tornado.roi_high],
+            orientation="h",
+            name="+20%",
+            marker_color="#34C759",
+            base=_tornado.base_roi,
+        ))
+        _t_fig.add_vline(
+            x=_tornado.base_roi,
+            line_dash="dot", line_color="#1D1D1F", line_width=1.5,
+            annotation_text="base", annotation_position="top",
+        )
+        _t_fig.update_layout(
+            barmode="overlay",
+            xaxis_title=t(lang, "tornado_impact_eur"),
+            yaxis_title=t(lang, "tornado_param"),
+            height=380,
+            **CHART_LAYOUT,
+        )
+        st.plotly_chart(_t_fig, width="stretch")
+
+        st.markdown("---")
+
+        # ── MONTE CARLO ──────────────────────────────────────────────────────
+        st.subheader(t(lang, "mc_title"))
+        with st.spinner("Running simulation…"):
+            _mc = run_monte_carlo(inp, n=5000)
+
+        _mc_c1, _mc_c2, _mc_c3 = st.columns(3)
+        _mc_c1.metric(t(lang, "mc_p_positive"),  "{:.1f}%".format(_mc.p_positive  * 100))
+        _mc_c2.metric(t(lang, "mc_p_payback18"), "{:.1f}%".format(_mc.p_payback_18 * 100))
+        _mc_c3.metric(t(lang, "mc_p_payback12"), "{:.1f}%".format(_mc.p_payback_12 * 100))
+
+        _mc_c4, _mc_c5 = st.columns(2)
+        _mc_c4.metric(t(lang, "mc_median"), _fmt(_mc.pct50, currency))
+        _mc_c5.metric(
+            t(lang, "mc_range"),
+            "{} – {}".format(_fmt(_mc.pct10, currency), _fmt(_mc.pct90, currency)),
+        )
+
+        _fig_mc = go.Figure(go.Histogram(
+            x=_mc.roi_samples,
+            nbinsx=60,
+            marker_color="#0071E3",
+            opacity=0.75,
+            name="{:,} {}".format(_mc.n_simulations, t(lang, "mc_runs")),
+        ))
+        _fig_mc.add_vline(x=0, line_dash="dash", line_color="#FF3B30", line_width=2,
+                          annotation_text="ROI=0", annotation_position="top right")
+        _fig_mc.add_vline(x=_mc.pct10, line_dash="dot", line_color="#AEAEB2", line_width=1)
+        _fig_mc.add_vline(x=_mc.pct50, line_dash="solid", line_color="#34C759", line_width=2,
+                          annotation_text="p50", annotation_position="top")
+        _fig_mc.add_vline(x=_mc.pct90, line_dash="dot", line_color="#AEAEB2", line_width=1)
+        _fig_mc.update_layout(
+            xaxis_title=t(lang, "mc_hist_x"),
+            yaxis_title=t(lang, "mc_hist_y"),
+            height=340,
+            **CHART_LAYOUT,
+        )
+        st.plotly_chart(_fig_mc, width="stretch")
+
+        st.markdown("---")
+
+        # ── NPV / IRR ────────────────────────────────────────────────────────
+        st.subheader(t(lang, "npv_title"))
+        _wacc = st.slider(t(lang, "wacc_label"), 6, 25, value=12, key="wacc_slider")
+        _npv_res = compute_npv_irr(
+            total_benefit=res.total_benefit,
+            impl_cost=float(impl_cost),
+            wacc_pct=float(_wacc),
+            decay=(1.0, 0.80, 0.65),
+        )
+
+        _npv_c1, _npv_c2 = st.columns(2)
+        _npv_c1.metric(t(lang, "npv_label"), _fmt(_npv_res.npv, currency))
+        _irr_str = (
+            "{:.1f}%".format(_npv_res.irr_pct)
+            if _npv_res.irr_pct is not None
+            else t(lang, "irr_na")
+        )
+        _npv_c2.metric(t(lang, "irr_label"), _irr_str)
+
+        st.markdown("---")
+
+        # ── 3-YEAR PROJECTION ────────────────────────────────────────────────
+        st.subheader(t(lang, "proj_title"))
+        st.caption(t(lang, "proj_decay_note"))
+
+        _years = [
+            "{} 1".format(t(lang, "proj_year")),
+            "{} 2".format(t(lang, "proj_year")),
+            "{} 3".format(t(lang, "proj_year")),
+        ]
+        _benefits  = _npv_res.yearly_benefits
+        _cum_npvs  = _npv_res.cumulative_npv
+
+        _fig_proj = go.Figure()
+        _fig_proj.add_trace(go.Bar(
+            x=_years,
+            y=_benefits,
+            name=t(lang, "proj_benefit"),
+            marker_color=[_C["green"], _C["blue"], _C["navy"]],
+            text=[_fmt(v, currency) for v in _benefits],
+            textposition="outside",
+            textfont=dict(size=11, color="#6E6E73"),
+        ))
+        _fig_proj.add_trace(go.Scatter(
+            x=_years,
+            y=_cum_npvs,
+            mode="lines+markers+text",
+            name=t(lang, "proj_cum_npv"),
+            line=dict(color=_C["gold"], width=2.5),
+            marker=dict(size=8, color=_C["gold"]),
+            text=[_fmt(v, currency) for v in _cum_npvs],
+            textposition="top center",
+            textfont=dict(size=10, color=_C["gold"]),
+            yaxis="y2",
+        ))
+        _fig_proj.update_layout(
+            yaxis=dict(title=t(lang, "proj_benefit")),
+            yaxis2=dict(
+                title=t(lang, "proj_cum_npv"),
+                overlaying="y", side="right", showgrid=False,
+            ),
+            barmode="group",
+            height=380,
+            **CHART_LAYOUT,
+        )
+        st.plotly_chart(_fig_proj, width="stretch")
