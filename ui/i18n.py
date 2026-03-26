@@ -161,6 +161,22 @@ TRANSLATIONS = {
         "faq_a4": "Sensitivity analysis: each parameter is varied ±20% independently. The wider the bar, the bigger the impact on ROI. Shows which levers matter most.",
         "faq_q5": "Why does the 3-year projection decay?",
         "faq_a5": "Year 1 = 100% of projected benefit. Year 2 = 80% (process drift, staff turnover). Year 3 = 65% (competition catches up). Conservative estimates used for honest projections.",
+        # Sprint 2 — Funnel / Scatter / Bullet
+        "funnel_title": "Pipeline Funnel: Before vs After",
+        "funnel_before": "Before",
+        "funnel_after": "After",
+        "scatter_title": "Monte Carlo: Risk / Return Cloud",
+        "scatter_x": "Risk (deviation from median, %)",
+        "scatter_y": "Net ROI",
+        "scatter_positive": "Positive ROI",
+        "scatter_negative": "Negative ROI",
+        "bullet_title": "Payback Progress",
+        "bullet_target": "Target: 12 months",
+        "bullet_current": "Current payback",
+        # Sprint 3 — About tab
+        "tab_about": "About",
+        "about_title": "About OmniCore ROI Auditor",
+        "about_version": "Version 3.2",
     },
     "ru": {
         "page_title": "OmniCore ROI Auditor",
@@ -324,6 +340,22 @@ TRANSLATIONS = {
         "faq_a4": "Анализ чувствительности: каждый параметр варьируется ±20% независимо. Чем шире полоса — тем сильнее влияние на ROI. Показывает, какие рычаги важнее всего.",
         "faq_q5": "Почему прогноз на 3 года затухает?",
         "faq_a5": "Год 1 = 100% проектной выгоды. Год 2 = 80% (дрейф процессов, текучка кадров). Год 3 = 65% (конкуренты догоняют). Консервативные оценки для честных прогнозов.",
+        # Sprint 2 — Funnel / Scatter / Bullet
+        "funnel_title": "Воронка пайплайна: До и После",
+        "funnel_before": "До",
+        "funnel_after": "После",
+        "scatter_title": "Монте-Карло: Облако риск/доходность",
+        "scatter_x": "Риск (отклонение от медианы, %)",
+        "scatter_y": "Чистый ROI",
+        "scatter_positive": "Положительный ROI",
+        "scatter_negative": "Отрицательный ROI",
+        "bullet_title": "Прогресс окупаемости",
+        "bullet_target": "Цель: 12 месяцев",
+        "bullet_current": "Текущая окупаемость",
+        # Sprint 3 — About tab
+        "tab_about": "О приложении",
+        "about_title": "О OmniCore ROI Auditor",
+        "about_version": "Версия 3.2",
     },
     "sr": {
         "page_title": "OmniCore ROI Auditor",
@@ -487,6 +519,22 @@ TRANSLATIONS = {
         "faq_a4": "Analiza osetljivosti: svaki parametar se menja ±20% nezavisno. Šira traka → veći uticaj na ROI. Pokazuje koji poluge su najvažnije.",
         "faq_q5": "Zašto projekcija za 3 godine opada?",
         "faq_a5": "Godina 1 = 100% projektovane koristi. Godina 2 = 80% (drift procesa, fluktuacija kadrova). Godina 3 = 65% (konkurencija sustiže). Konzervativne procene za iskrene projekcije.",
+        # Sprint 2 — Funnel / Scatter / Bullet
+        "funnel_title": "Levak pipeline-a: Pre i Posle",
+        "funnel_before": "Pre",
+        "funnel_after": "Posle",
+        "scatter_title": "Monte Karlo: Oblak rizik/prinos",
+        "scatter_x": "Rizik (odstupanje od medijane, %)",
+        "scatter_y": "Neto ROI",
+        "scatter_positive": "Pozitivni ROI",
+        "scatter_negative": "Negativni ROI",
+        "bullet_title": "Napredak povrata investicije",
+        "bullet_target": "Cilj: 12 meseci",
+        "bullet_current": "Trenutni period povrata",
+        # Sprint 3 — About tab
+        "tab_about": "O aplikaciji",
+        "about_title": "O OmniCore ROI Auditoru",
+        "about_version": "Verzija 3.2",
     },
 }
 
