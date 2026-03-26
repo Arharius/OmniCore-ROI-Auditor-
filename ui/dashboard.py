@@ -292,7 +292,10 @@ def run_dashboard():
     /* Hide Streamlit toolbar, header, footer */
     header, footer, #MainMenu,
     [data-testid="stToolbar"],
-    [data-testid="stDecoration"] {
+    [data-testid="stDecoration"],
+    [data-testid="stHeader"],
+    [data-testid="baseButton-headerNoPadding"],
+    .stAppDeployButton {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
