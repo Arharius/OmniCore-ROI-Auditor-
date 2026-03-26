@@ -79,7 +79,7 @@ TRANSLATIONS = {
         "download_txt": "Download TXT",
         "download_pdf": "Download PDF",
         "linkedin_label": "LinkedIn Hook",
-        "linkedin_text": "Conducted an ROI audit for {company}. Net ROI: {roi:,.0f} EUR ({roi_pct:.0f}%), payback — {payback:.1f} months. Used graph analysis, Markov chains and Bayesian update. If you want a similar breakdown for your process — reach out.",
+        "linkedin_text": "Conducted an ROI audit for {company}. Net ROI: {roi_str} ({roi_pct:.0f}%), payback — {payback:.1f} months. Used graph analysis, Markov chains and Bayesian update. If you want a similar breakdown for your process — reach out.",
         # New keys
         "currency_label": "Currency",
         "auditor_section": "**Auditor**",
@@ -129,7 +129,7 @@ TRANSLATIONS = {
         "proj_benefit": "Annual benefit",
         "proj_cum_npv": "Cumulative NPV",
         "risk_adj_roi": "Risk-adjusted ROI",
-        "risk_adj_formula": "Net ROI × Bayesian confidence = {val:,.0f} EUR",
+        "risk_adj_formula": "Net ROI × Bayesian confidence = {val_str}",
     },
     "ru": {
         "page_title": "OmniCore ROI Auditor",
@@ -211,7 +211,7 @@ TRANSLATIONS = {
         "download_txt": "Скачать TXT",
         "download_pdf": "Скачать PDF",
         "linkedin_label": "LinkedIn Hook",
-        "linkedin_text": "Провёл ROI-аудит для {company}. Чистый ROI: {roi:,.0f} EUR ({roi_pct:.0f}%), окупаемость — {payback:.1f} мес. Использовал граф-анализ, цепи Маркова и байесовское обновление. Если хотите такой же разбор — пишите.",
+        "linkedin_text": "Провёл ROI-аудит для {company}. Чистый ROI: {roi_str} ({roi_pct:.0f}%), окупаемость — {payback:.1f} мес. Использовал граф-анализ, цепи Маркова и байесовское обновление. Если хотите такой же разбор — пишите.",
         # New keys
         "currency_label": "Валюта",
         "auditor_section": "**Аудитор**",
@@ -261,7 +261,7 @@ TRANSLATIONS = {
         "proj_benefit": "Годовая выгода",
         "proj_cum_npv": "Накопленный NPV",
         "risk_adj_roi": "Скорректированный на риск ROI",
-        "risk_adj_formula": "Чистый ROI × Байес. доверие = {val:,.0f} EUR",
+        "risk_adj_formula": "Чистый ROI × Байес. доверие = {val_str}",
     },
     "sr": {
         "page_title": "OmniCore ROI Auditor",
@@ -343,7 +343,7 @@ TRANSLATIONS = {
         "download_txt": "Preuzmi TXT",
         "download_pdf": "Preuzmi PDF",
         "linkedin_label": "LinkedIn Hook",
-        "linkedin_text": "Sproveo sam ROI reviziju za {company}. Neto ROI: {roi:,.0f} EUR ({roi_pct:.0f}%), povrat — {payback:.1f} mes. Koristio sam analizu grafova, Markovljeve lance i Bajesovo ažuriranje. Ako želite isti pregled za vaš proces — javite se.",
+        "linkedin_text": "Sproveo sam ROI reviziju za {company}. Neto ROI: {roi_str} ({roi_pct:.0f}%), povrat — {payback:.1f} mes. Koristio sam analizu grafova, Markovljeve lance i Bajesovo ažuriranje. Ako želite isti pregled za vaš proces — javite se.",
         # New keys
         "currency_label": "Valuta",
         "auditor_section": "**Revizor**",
@@ -393,7 +393,7 @@ TRANSLATIONS = {
         "proj_benefit": "Godišnja korist",
         "proj_cum_npv": "Kumulativni NPV",
         "risk_adj_roi": "ROI korigovan za rizik",
-        "risk_adj_formula": "Neto ROI × Bajesovsko poverenje = {val:,.0f} EUR",
+        "risk_adj_formula": "Neto ROI × Bajesovsko poverenje = {val_str}",
     },
 }
 

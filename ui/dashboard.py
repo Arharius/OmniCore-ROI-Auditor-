@@ -504,6 +504,13 @@ def run_dashboard():
         p_before = st.slider(t(lang, "p_before"), 50,  95, key="p_before")
         p_after  = st.slider(t(lang, "p_after"),  70,  99, key="p_after")
 
+        _input_note = {
+            "en": "ℹ️ Input values are in EUR. Display currency converts all outputs.",
+            "ru": "ℹ️ Входные данные — в EUR. Валюта меняет только отображение результатов.",
+            "sr": "ℹ️ Ulazne vrednosti su u EUR. Valuta menja prikaz rezultata.",
+        }
+        st.caption(_input_note.get(lang, _input_note["en"]))
+
         st.markdown(t(lang, "invest_section"))
         impl_cost    = st.slider(t(lang, "impl_cost"), 5000, 100000, step=1000, key="impl_cost")
         pipeline_util = st.slider(
@@ -543,6 +550,9 @@ def run_dashboard():
         st.caption(t(lang, "footer"))
 
     # ── COMPUTE ────────────────────────────────────────────────────────────────
+    # Safety fallback: always read currency from session state directly
+    currency = st.session_state.get("currency_select", "EUR")
+
     math_eng = MathEngine()
     roi_eng  = ROIEngine()
 
@@ -670,16 +680,18 @@ def run_dashboard():
     c1, c2, c3, c4 = st.columns(4)
     _roi_delta = res.net_roi - _bench_roi_eur
     _pay_delta = _bench["payback"] - res.payback_months
+    _cur_sym = _CURRENCIES.get(currency, _CURRENCIES["EUR"])["sym"]
+    _sign_roi = "+" if _roi_delta >= 0 else ""
     c1.metric(
         t(lang, "metric_net_roi"),
         _fmt(res.net_roi, currency),
-        delta="{:+,.0f}€ {}".format(_roi_delta, t(lang, "vs_industry")),
+        delta="{}{} {}".format(_sign_roi, _fmt(_roi_delta, currency), t(lang, "vs_industry")),
         delta_color="normal",
     )
     c2.metric(
         t(lang, "metric_payback"),
         "{:.1f} {}".format(res.payback_months, t(lang, "months")),
-        delta="{:+.1f} мес {}".format(_pay_delta, t(lang, "vs_industry")),
+        delta="{:+.1f} {} {}".format(_pay_delta, t(lang, "months"), t(lang, "vs_industry")),
         delta_color="normal",
     )
     c3.metric(t(lang, "metric_bayes"), "{:.1f}%".format(res.bayesian_posterior_pct))
@@ -695,7 +707,12 @@ def run_dashboard():
         '<span style="font-size:20px;font-weight:700;color:#0071E3;">'
         + _fmt(_risk_adj_val, currency) + '</span>&nbsp;'
         '<span style="font-size:12px;color:#AEAEB2;">'
-        + t(lang, "risk_adj_formula", val=_risk_adj_val) + '</span>'
+        + {
+            "en": "Net ROI × Bayesian confidence",
+            "ru": "Чистый ROI × Байес. доверие",
+            "sr": "Neto ROI × Bajesovsko poverenje",
+        }.get(lang, "Net ROI × Bayesian confidence")
+        + ' = ' + _fmt(_risk_adj_val, currency) + '</span>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -711,12 +728,15 @@ def run_dashboard():
     # ── TAB 1: ROI BREAKDOWN ───────────────────────────────────────────────────
     with tab1:
         st.subheader(t(lang, "waterfall_title"))
+        _wf_rate = _CURRENCIES[currency]["rate"]
+        _wf_sym  = _CURRENCIES[currency]["sym"]
         labels   = [t(lang, "time_saved"), t(lang, "error_saved"),
                     t(lang, "revenue_speed"), t(lang, "revenue_conv"),
                     t(lang, "investment"), t(lang, "net_roi")]
-        values   = [res.time_saved_annual, res.error_reduction_annual,
-                    res.revenue_impact_annual, res.markov_gain_annual,
-                    -impl_cost, res.net_roi]
+        values   = [v * _wf_rate for v in [
+            res.time_saved_annual, res.error_reduction_annual,
+            res.revenue_impact_annual, res.markov_gain_annual,
+            -impl_cost, res.net_roi]]
         measures = ["relative", "relative", "relative", "relative", "relative", "total"]
 
         fig_wf = go.Figure(go.Waterfall(
@@ -726,7 +746,7 @@ def run_dashboard():
             increasing=dict(marker_color=_C["green"]),
             decreasing=dict(marker_color=_C["red"]),
             totals=dict(marker_color=_C["navy"]),
-            texttemplate="%{y:,.0f} €", textposition="outside",
+            texttemplate="%{y:,.0f} " + _wf_sym, textposition="outside",
             textfont=dict(color="#7a8499", size=10),
         ))
         fig_wf.update_layout(showlegend=False, height=420, **CHART_LAYOUT)
@@ -861,9 +881,11 @@ def run_dashboard():
             df_N = pd.DataFrame(N_mat, index=m_states, columns=m_states)
             st.dataframe(df_N.style.format("{:.4f}"))
         st.markdown(t(lang, "timeline_title"))
+        _tl_rate     = _CURRENCIES[currency]["rate"]
+        _tl_label    = _CURRENCIES[currency]["label"]
         months_range  = list(range(0, 13))
         monthly_gain  = res.total_benefit / 12
-        cumulative    = [monthly_gain * m - impl_cost for m in months_range]
+        cumulative    = [(monthly_gain * m - impl_cost) * _tl_rate for m in months_range]
         fig_tl = go.Figure()
         fig_tl.add_trace(go.Scatter(x=months_range, y=cumulative, mode="lines+markers",
                                     name=t(lang, "cumulative_roi"),
@@ -873,7 +895,7 @@ def run_dashboard():
         fig_tl.add_trace(go.Scatter(x=months_range, y=[0]*13, mode="lines",
                                     name=t(lang, "breakeven"),
                                     line=dict(color=_C["gold"], width=1.5, dash="dot")))
-        fig_tl.update_layout(xaxis_title=t(lang, "month_label"), yaxis_title="EUR", height=400, **CHART_LAYOUT)
+        fig_tl.update_layout(xaxis_title=t(lang, "month_label"), yaxis_title=_tl_label, height=400, **CHART_LAYOUT)
         st.plotly_chart(fig_tl, width="stretch")
 
     # ── TAB 4: BAYES ──────────────────────────────────────────────────────────
@@ -910,7 +932,13 @@ def run_dashboard():
     # ── TAB 5: PASSPORT ───────────────────────────────────────────────────────
     with tab5:
         st.subheader(t(lang, "passport_title"))
-        passport = roi_eng.passport_text(inp, res)
+        _pass_sym  = _CURRENCIES[currency]["sym"]
+        _pass_rate = _CURRENCIES[currency]["rate"]
+        passport = roi_eng.passport_text(inp, res,
+                                         currency_sym=_pass_sym,
+                                         currency_rate=_pass_rate,
+                                         lang=lang,
+                                         auditor_name=auditor_name)
         st.code(passport, language="")
 
         # Meeting notes (4)
@@ -980,6 +1008,9 @@ def run_dashboard():
                         net_roi=res.net_roi,
                         roi_pct=res.roi_pct,
                         payback_months=res.payback_months,
+                        currency_sym=_pass_sym,
+                        currency_rate=_pass_rate,
+                        lang=lang,
                     )
                 except Exception as _pdf_err:
                     st.error("PDF error: {}".format(_pdf_err))
@@ -993,12 +1024,17 @@ def run_dashboard():
                 )
 
         linkedin_text = t(lang, "linkedin_text",
-                          company=company_name, roi=res.net_roi,
-                          roi_pct=res.roi_pct, payback=res.payback_months)
+                          company=company_name,
+                          roi_str=_fmt(res.net_roi, currency),
+                          roi_pct=res.roi_pct,
+                          payback=res.payback_months)
         st.text_area(t(lang, "linkedin_label"), value=linkedin_text, height=110, key="linkedin_ta")
 
     # ── TAB 6: PRECISION ANALYSIS ─────────────────────────────────────────────
     with tab6:
+        _prec_sym   = _CURRENCIES[currency]["sym"]
+        _prec_label = _CURRENCIES[currency]["label"]
+        _prec_rate  = _CURRENCIES[currency]["rate"]
 
         # ── TORNADO CHART ────────────────────────────────────────────────────
         st.subheader(t(lang, "tornado_title"))
@@ -1061,9 +1097,14 @@ def run_dashboard():
             line_dash="dot", line_color="#1D1D1F", line_width=1.5,
             annotation_text="base", annotation_position="top",
         )
+        _tornado_x_labels = {
+            "en": "ROI Impact ({})".format(_prec_label),
+            "ru": "Влияние на ROI ({})".format(_prec_label),
+            "sr": "Uticaj na ROI ({})".format(_prec_label),
+        }
         _t_fig.update_layout(
             barmode="overlay",
-            xaxis_title=t(lang, "tornado_impact_eur"),
+            xaxis_title=_tornado_x_labels.get(lang, _tornado_x_labels["en"]),
             yaxis_title=t(lang, "tornado_param"),
             height=380,
             **CHART_LAYOUT,
@@ -1089,8 +1130,9 @@ def run_dashboard():
             "{} – {}".format(_fmt(_mc.pct10, currency), _fmt(_mc.pct90, currency)),
         )
 
+        _mc_samples_conv = [v * _prec_rate for v in _mc.roi_samples]
         _fig_mc = go.Figure(go.Histogram(
-            x=_mc.roi_samples,
+            x=_mc_samples_conv,
             nbinsx=60,
             marker_color="#0071E3",
             opacity=0.75,
@@ -1098,12 +1140,17 @@ def run_dashboard():
         ))
         _fig_mc.add_vline(x=0, line_dash="dash", line_color="#FF3B30", line_width=2,
                           annotation_text="ROI=0", annotation_position="top right")
-        _fig_mc.add_vline(x=_mc.pct10, line_dash="dot", line_color="#AEAEB2", line_width=1)
-        _fig_mc.add_vline(x=_mc.pct50, line_dash="solid", line_color="#34C759", line_width=2,
+        _fig_mc.add_vline(x=_mc.pct10 * _prec_rate, line_dash="dot", line_color="#AEAEB2", line_width=1)
+        _fig_mc.add_vline(x=_mc.pct50 * _prec_rate, line_dash="solid", line_color="#34C759", line_width=2,
                           annotation_text="p50", annotation_position="top")
-        _fig_mc.add_vline(x=_mc.pct90, line_dash="dot", line_color="#AEAEB2", line_width=1)
+        _fig_mc.add_vline(x=_mc.pct90 * _prec_rate, line_dash="dot", line_color="#AEAEB2", line_width=1)
+        _mc_x_labels = {
+            "en": "Net ROI ({})".format(_prec_label),
+            "ru": "Чистый ROI ({})".format(_prec_label),
+            "sr": "Neto ROI ({})".format(_prec_label),
+        }
         _fig_mc.update_layout(
-            xaxis_title=t(lang, "mc_hist_x"),
+            xaxis_title=_mc_x_labels.get(lang, _mc_x_labels["en"]),
             yaxis_title=t(lang, "mc_hist_y"),
             height=340,
             **CHART_LAYOUT,
@@ -1142,8 +1189,10 @@ def run_dashboard():
             "{} 2".format(t(lang, "proj_year")),
             "{} 3".format(t(lang, "proj_year")),
         ]
-        _benefits  = _npv_res.yearly_benefits
-        _cum_npvs  = _npv_res.cumulative_npv
+        _benefits_eur = _npv_res.yearly_benefits
+        _cum_npvs_eur = _npv_res.cumulative_npv
+        _benefits     = [v * _prec_rate for v in _benefits_eur]
+        _cum_npvs     = [v * _prec_rate for v in _cum_npvs_eur]
 
         _fig_proj = go.Figure()
         _fig_proj.add_trace(go.Bar(
@@ -1151,7 +1200,7 @@ def run_dashboard():
             y=_benefits,
             name=t(lang, "proj_benefit"),
             marker_color=[_C["green"], _C["blue"], _C["navy"]],
-            text=[_fmt(v, currency) for v in _benefits],
+            text=[_fmt(v, currency) for v in _benefits_eur],
             textposition="outside",
             textfont=dict(size=11, color="#6E6E73"),
         ))
@@ -1162,7 +1211,7 @@ def run_dashboard():
             name=t(lang, "proj_cum_npv"),
             line=dict(color=_C["gold"], width=2.5),
             marker=dict(size=8, color=_C["gold"]),
-            text=[_fmt(v, currency) for v in _cum_npvs],
+            text=[_fmt(v, currency) for v in _cum_npvs_eur],
             textposition="top center",
             textfont=dict(size=10, color=_C["gold"]),
             yaxis="y2",

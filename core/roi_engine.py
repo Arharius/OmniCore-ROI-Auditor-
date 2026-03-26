@@ -86,45 +86,122 @@ class ROIEngine:
             bayesian_ci=bayesian_ci,
         )
 
-    def passport_text(self, inp: ROIInput, res: ROIResult) -> str:
+    def passport_text(self, inp: ROIInput, res: ROIResult,
+                      currency_sym: str = "EUR", currency_rate: float = 1.0,
+                      lang: str = "ru",
+                      auditor_name: str = "") -> str:
         """
-        Генерирует ASCII-паспорт ROI с ключевыми метриками.
+        Generates an ASCII ROI passport in the selected language.
 
-        Параметры:
-            inp: ROIInput — входные данные компании
-            res: ROIResult — результаты расчёта
-
-        Возвращает:
-            str: форматированный текстовый паспорт ROI.
+        Args:
+            inp: ROIInput
+            res: ROIResult
+            currency_sym: currency symbol (€, ₽, RSD …)
+            currency_rate: multiplier from EUR
+            lang: "en" | "ru" | "sr"
         """
+        _L = {
+            "en": {
+                "title":       "ROI PASSPORT — OMNICORE AUDITOR",
+                "company":     "Company  ",
+                "date":        "Date     ",
+                "metrics":     "KEY METRICS",
+                "time_saved":  "[GRAPH]   Time savings (year)        ",
+                "error_saved": "[GRAPH]   Error reduction (year)     ",
+                "rev_speed":   "[MARKOV]  Revenue — deal speed       ",
+                "rev_conv":    "[MARKOV]  Revenue — conversion       ",
+                "b_prior":     "[BAYES]   Confidence (prior)         ",
+                "b_post":      "[BAYES]   Confidence (posterior)     ",
+                "b_ci":        "[BAYES]   80% CI                     ",
+                "total_b":     "Total benefit (year)      ",
+                "net_roi":     "Net ROI                   ",
+                "roi_pct":     "ROI %                     ",
+                "payback":     "Payback period            ",
+                "months":      "mo.",
+                "next":        "Next step: pass the report to the implementation team",
+                "next2":       "and agree on the automation roadmap.",
+                "auditor_lbl": "Auditor",
+            },
+            "ru": {
+                "title":       "ПАСПОРТ ROI — OMNICORE AUDITOR",
+                "company":     "Компания  ",
+                "date":        "Дата      ",
+                "metrics":     "КЛЮЧЕВЫЕ МЕТРИКИ",
+                "time_saved":  "[ГРАФ]   Экономия времени (год)    ",
+                "error_saved": "[ГРАФ]   Снижение ошибок (год)     ",
+                "rev_speed":   "[МАРКОВ] Выручка — скорость сделок ",
+                "rev_conv":    "[МАРКОВ] Выручка — конверсия       ",
+                "b_prior":     "[БАЙЕС]  Доверие до обновления     ",
+                "b_post":      "[БАЙЕС]  Доверие после обновления  ",
+                "b_ci":        "[БАЙЕС]  80% ДИ                    ",
+                "total_b":     "Суммарная выгода (год)    ",
+                "net_roi":     "Чистый ROI                ",
+                "roi_pct":     "ROI %                     ",
+                "payback":     "Срок окупаемости          ",
+                "months":      "мес.",
+                "next":        "Следующий шаг: передать отчёт команде внедрения",
+                "next2":       "и согласовать план-график автоматизации.",
+                "auditor_lbl": "Аудитор",
+            },
+            "sr": {
+                "title":       "ROI PASOŠ — OMNICORE AUDITOR",
+                "company":     "Kompanija ",
+                "date":        "Datum     ",
+                "metrics":     "KLJUČNE METRIKE",
+                "time_saved":  "[GRAF]   Ušteda vremena (god.)      ",
+                "error_saved": "[GRAF]   Smanjenje grešaka (god.)   ",
+                "rev_speed":   "[MARKOV] Prihod — brzina poslova    ",
+                "rev_conv":    "[MARKOV] Prihod — konverzija        ",
+                "b_prior":     "[BAJES]  Poverenje (apriorno)       ",
+                "b_post":      "[BAJES]  Poverenje (aposteriorno)   ",
+                "b_ci":        "[BAJES]  80% IP                     ",
+                "total_b":     "Ukupna korist (god.)      ",
+                "net_roi":     "Neto ROI                  ",
+                "roi_pct":     "ROI %                     ",
+                "payback":     "Period povrata            ",
+                "months":      "mes.",
+                "next":        "Sledeći korak: proslediti izveštaj timu za implementaciju",
+                "next2":       "i dogovoriti plan automatizacije.",
+                "auditor_lbl": "Revizor",
+            },
+        }
+        l = _L.get(lang, _L["en"])
+        r = currency_rate
+        s = currency_sym
         today = date.today().strftime("%d.%m.%Y")
+        SEP = "=" * 64
+        sep = "-" * 64
         lines = [
-            "=" * 60,
-            "        ПАСПОРТ ROI — OMNICORE AUDITOR",
-            "=" * 60,
-            f"  Компания   : {inp.company_name}",
-            f"  Дата       : {today}",
-            "-" * 60,
-            "  КЛЮЧЕВЫЕ МЕТРИКИ",
-            "-" * 60,
-            f"  [ГРАФ]   Экономия времени (год)    : {res.time_saved_annual:>12,.2f} EUR",
-            f"  [ГРАФ]   Снижение ошибок (год)     : {res.error_reduction_annual:>12,.2f} EUR",
-            f"  [МАРКОВ] Выручка — скорость сделок : {res.revenue_impact_annual:>12,.2f} EUR",
-            f"  [МАРКОВ] Выручка — конверсия       : {res.markov_gain_annual:>12,.2f} EUR",
-            f"  [БАЙЕС]  Доверие до обновления     : {res.bayesian_prior_pct:>11.1f}%",
-            f"  [БАЙЕС]  Доверие после обновления  : {res.bayesian_posterior_pct:>11.1f}%",
-            f"  [БАЙЕС]  80% ДИ                    : {res.bayesian_ci:>12}",
-            "-" * 60,
-            f"  Суммарная выгода (год)    : {res.total_benefit:>16,.2f} EUR",
-            f"  Чистый ROI                : {res.net_roi:>16,.2f} EUR",
-            f"  ROI %                     : {res.roi_pct:>15.2f}%",
-            f"  Срок окупаемости          : {res.payback_months:>12.1f} мес.",
-            "=" * 60,
-            "  Следующий шаг: передать отчёт команде внедрения",
-            "  и согласовать план-график автоматизации.",
-            "-" * 60,
-            "  Аудитор: OmniCore ROI Engine v1.0",
-            "=" * 60,
+            SEP,
+            "  {}".format(l["title"]),
+            SEP,
+            "  {}: {}".format(l["company"], inp.company_name),
+            "  {}: {}".format(l["date"], today),
+            sep,
+            "  {}".format(l["metrics"]),
+            sep,
+            "  {}: {:>12,.2f} {}".format(l["time_saved"],  res.time_saved_annual * r,      s),
+            "  {}: {:>12,.2f} {}".format(l["error_saved"], res.error_reduction_annual * r,  s),
+            "  {}: {:>12,.2f} {}".format(l["rev_speed"],   res.revenue_impact_annual * r,   s),
+            "  {}: {:>12,.2f} {}".format(l["rev_conv"],    res.markov_gain_annual * r,       s),
+            "  {}: {:>16.1f}%".format(l["b_prior"],  res.bayesian_prior_pct),
+            "  {}: {:>16.1f}%".format(l["b_post"],   res.bayesian_posterior_pct),
+            "  {}: {:>17}".format(l["b_ci"],         res.bayesian_ci),
+            sep,
+            "  {}: {:>16,.2f} {}".format(l["total_b"], res.total_benefit * r, s),
+            "  {}: {:>16,.2f} {}".format(l["net_roi"], res.net_roi * r,        s),
+            "  {}: {:>16.2f}%".format(l["roi_pct"],   res.roi_pct),
+            "  {}: {:>12.1f} {}".format(l["payback"],  res.payback_months, l["months"]),
+            SEP,
+            "  {}".format(l["next"]),
+            "  {}".format(l["next2"]),
+            sep,
+            "  {}: {} | OmniCore ROI Engine v1.0 | {}".format(
+                l["auditor_lbl"],
+                auditor_name if auditor_name else "OmniCore",
+                date.today().strftime("%d.%m.%Y"),
+            ),
+            SEP,
         ]
         return "\n".join(lines)
 

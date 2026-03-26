@@ -121,7 +121,140 @@ def build_roi_passport_pdf(
     payback_months=0,
     success_fee_threshold=50000,
     success_fee_pct=10,
+    currency_sym="EUR",
+    currency_rate=1.0,
+    lang="ru",
 ):
+    _T = {
+        "en": {
+            "net_roi_lbl":   "Net ROI",
+            "roi_pct_lbl":   "ROI %",
+            "payback_lbl":   "Payback",
+            "months":        "mo.",
+            "component":     "Component",
+            "before":        "BEFORE",
+            "after":         "AFTER",
+            "source":        "Source",
+            "labor":         "Labor",
+            "h_mo":          "h/mo",
+            "errors":        "Process errors",
+            "deal_speed":    "Deal speed",
+            "days":          "d.",
+            "conversion":    "Deal conversion",
+            "t_time_saved":  "+ Time savings",
+            "t_error_red":   "+ Error reduction",
+            "t_rev_speed":   "+ Revenue (speed)",
+            "t_rev_conv":    "+ Revenue (conv.)",
+            "t_total":       "= Total benefit",
+            "t_invest":      "\u2212 Investment",
+            "t_net_roi":     "= NET ROI",
+            "model":         "Model",
+            "param":         "Parameter",
+            "result":        "Result",
+            "interpretation":"Interpretation",
+            "bottleneck_p":  "Bottleneck",
+            "bottleneck_i":  "Process optimization priority",
+            "p_complete_p":  "P(completion)",
+            "markov_i":      "Conversion growth via Markov chains",
+            "bayes_p":       "Result confidence",
+            "ci_label":      "80% CI: {}",
+            "fee_format":    "Payment format",
+            "fee_threshold": "Threshold",
+            "fee_share":     "Share",
+            "fee_year1":     "Year-1 estimate",
+            "fee_model":     "Subscription + Success Fee",
+            "notes_title":   "Meeting notes",
+            "next_step":     "Next step:",
+            "next_body":     "Pass the report to the implementation team and agree on the roadmap.",
+            "auditor_lbl":   "Auditor:",
+        },
+        "ru": {
+            "net_roi_lbl":   "Чистый ROI",
+            "roi_pct_lbl":   "ROI %",
+            "payback_lbl":   "Окупаемость",
+            "months":        "мес.",
+            "component":     "Компонент",
+            "before":        "ДО",
+            "after":         "ПОСЛЕ",
+            "source":        "Источник",
+            "labor":         "Трудозатраты",
+            "h_mo":          "ч/мес",
+            "errors":        "Ошибки процесса",
+            "deal_speed":    "Скорость сделок",
+            "days":          "дн.",
+            "conversion":    "Конверсия сделок",
+            "t_time_saved":  "+ Экономия времени",
+            "t_error_red":   "+ Снижение ошибок",
+            "t_rev_speed":   "+ Выручка (скорость)",
+            "t_rev_conv":    "+ Выручка (конверсия)",
+            "t_total":       "= Суммарная выгода",
+            "t_invest":      "\u2212 Инвестиции",
+            "t_net_roi":     "= ЧИСТЫЙ ROI",
+            "model":         "Модель",
+            "param":         "Параметр",
+            "result":        "Результат",
+            "interpretation":"Интерпретация",
+            "bottleneck_p":  "Узкое место",
+            "bottleneck_i":  "Приоритет оптимизации процесса",
+            "p_complete_p":  "P(завершение)",
+            "markov_i":      "Рост конверсии через цепи Маркова",
+            "bayes_p":       "Доверие к результату",
+            "ci_label":      "80% ДИ: {}",
+            "fee_format":    "Формат оплаты",
+            "fee_threshold": "Порог",
+            "fee_share":     "Доля",
+            "fee_year1":     "Оценка Year-1",
+            "fee_model":     "Подписка + Success Fee",
+            "notes_title":   "Заметки встречи",
+            "next_step":     "Следующий шаг:",
+            "next_body":     "Передать отчёт команде внедрения и согласовать план-график автоматизации.",
+            "auditor_lbl":   "Аудитор:",
+        },
+        "sr": {
+            "net_roi_lbl":   "Neto ROI",
+            "roi_pct_lbl":   "ROI %",
+            "payback_lbl":   "Povrat",
+            "months":        "mes.",
+            "component":     "Komponenta",
+            "before":        "PRE",
+            "after":         "POSLE",
+            "source":        "Izvor",
+            "labor":         "Radni sati",
+            "h_mo":          "h/mes.",
+            "errors":        "Greške procesa",
+            "deal_speed":    "Brzina poslova",
+            "days":          "dana",
+            "conversion":    "Konverzija poslova",
+            "t_time_saved":  "+ Ušteda vremena",
+            "t_error_red":   "+ Smanjenje grešaka",
+            "t_rev_speed":   "+ Prihod (brzina)",
+            "t_rev_conv":    "+ Prihod (konverzija)",
+            "t_total":       "= Ukupna korist",
+            "t_invest":      "\u2212 Investicija",
+            "t_net_roi":     "= NETO ROI",
+            "model":         "Model",
+            "param":         "Parametar",
+            "result":        "Rezultat",
+            "interpretation":"Interpretacija",
+            "bottleneck_p":  "Usko grlo",
+            "bottleneck_i":  "Prioritet optimizacije procesa",
+            "p_complete_p":  "P(završetak)",
+            "markov_i":      "Rast konverzije kroz Markovljeve lance",
+            "bayes_p":       "Poverenje u rezultat",
+            "ci_label":      "80% IP: {}",
+            "fee_format":    "Format plaćanja",
+            "fee_threshold": "Prag",
+            "fee_share":     "Udeo",
+            "fee_year1":     "Procena Year-1",
+            "fee_model":     "Pretplata + Success Fee",
+            "notes_title":   "Beleške sa sastanka",
+            "next_step":     "Sledeći korak:",
+            "next_body":     "Proslediti izveštaj timu za implementaciju i dogovoriti plan automatizacije.",
+            "auditor_lbl":   "Revizor:",
+        },
+    }
+    T = _T.get(lang, _T["en"])
+
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
@@ -131,9 +264,19 @@ def build_roi_passport_pdf(
     W = A4[0] - 24*mm
     story = []
 
+    r  = currency_rate
+    cs = currency_sym
+
     today_str   = date.today().strftime("%d.%m.%Y")
-    total_benefit = time_saved + error_reduction + revenue_impact + markov_gain
-    year1_fee   = max(0.0, (net_roi - success_fee_threshold) * (success_fee_pct / 100.0))
+    total_benefit       = (time_saved + error_reduction + revenue_impact + markov_gain) * r
+    time_saved_c        = time_saved          * r
+    error_reduction_c   = error_reduction     * r
+    revenue_impact_c    = revenue_impact      * r
+    markov_gain_c       = markov_gain         * r
+    implementation_c    = implementation_cost * r
+    net_roi_c           = net_roi             * r
+    fee_threshold_c     = success_fee_threshold * r
+    year1_fee           = max(0.0, (net_roi_c - fee_threshold_c) * (success_fee_pct / 100.0))
 
     # ── 1. HEADER ──────────────────────────────────────────────────────────────
     hdr_data = [[
@@ -154,12 +297,12 @@ def build_roi_passport_pdf(
 
     # ── 2. ROI HERO ────────────────────────────────────────────────────────────
     hero_data = [
-        [_p("{:,.0f} EUR".format(net_roi), S_HERO),
+        [_p("{:,.0f} {}".format(net_roi_c, cs), S_HERO),
          _p("{:.1f}%".format(roi_pct), S_HERO),
-         _p("{:.1f} мес.".format(payback_months), S_HERO)],
-        [_p("Чистый ROI", S_HERO_SUB),
-         _p("ROI %",      S_HERO_SUB),
-         _p("Окупаемость",S_HERO_SUB)],
+         _p("{:.1f} {}".format(payback_months, T["months"]), S_HERO)],
+        [_p(T["net_roi_lbl"], S_HERO_SUB),
+         _p(T["roi_pct_lbl"], S_HERO_SUB),
+         _p(T["payback_lbl"], S_HERO_SUB)],
     ]
     hero_ts = _ts_base(bg=GRAY_D, grid=ACCENT) + [
         ("BACKGROUND", (0, 0), (-1, -1), GRAY_D),
@@ -170,25 +313,26 @@ def build_roi_passport_pdf(
     story.append(Spacer(1, 4*mm))
 
     # ── 3. 4-METRICS TABLE ─────────────────────────────────────────────────────
-    m_hdr = [_p("Компонент", S_BOLD_C), _p("ДО", S_BOLD_C), _p("ПОСЛЕ", S_BOLD_C),
-             _p("EUR / год",  S_BOLD_C), _p("Источник", S_BOLD_C)]
+    m_hdr = [_p(T["component"], S_BOLD_C), _p(T["before"], S_BOLD_C), _p(T["after"], S_BOLD_C),
+             _p("{} / {}".format(cs, {"en":"yr","ru":"год","sr":"god."}.get(lang,"yr")), S_BOLD_C),
+             _p(T["source"], S_BOLD_C)]
     m_rows = [
-        [_p("Трудозатраты",    S_LEFT),
-         _p("{} ч/мес".format(manual_hours_before), S_CENTER),
-         _p("{:.0f} ч/мес".format(manual_hours_before*(1-automation_rate_pct/100)), S_CENTER),
-         _p("{:,.0f}".format(time_saved),      S_GREEN), _p("[ГРАФ]", S_SRC)],
-        [_p("Ошибки процесса", S_LEFT),
+        [_p(T["labor"],      S_LEFT),
+         _p("{} {}".format(manual_hours_before, T["h_mo"]), S_CENTER),
+         _p("{:.0f} {}".format(manual_hours_before*(1-automation_rate_pct/100), T["h_mo"]), S_CENTER),
+         _p("{:,.0f}".format(time_saved_c),      S_GREEN), _p("[GRAPH]", S_SRC)],
+        [_p(T["errors"],     S_LEFT),
          _p("{:.1f}%".format(error_rate_before), S_CENTER),
          _p("{:.1f}%".format(error_rate_after),  S_CENTER),
-         _p("{:,.0f}".format(error_reduction),   S_GREEN), _p("[ГРАФ]", S_SRC2)],
-        [_p("Скорость сделок", S_LEFT),
-         _p("{:.0f} дн.".format(deal_cycle_before), S_CENTER),
-         _p("{:.0f} дн.".format(deal_cycle_after),  S_CENTER),
-         _p("{:,.0f}".format(revenue_impact),   S_GREEN), _p("[МАРКОВ]", S_SRM)],
-        [_p("Конверсия сделок",S_LEFT),
+         _p("{:,.0f}".format(error_reduction_c), S_GREEN), _p("[GRAPH]", S_SRC2)],
+        [_p(T["deal_speed"], S_LEFT),
+         _p("{:.0f} {}".format(deal_cycle_before, T["days"]), S_CENTER),
+         _p("{:.0f} {}".format(deal_cycle_after,  T["days"]), S_CENTER),
+         _p("{:,.0f}".format(revenue_impact_c),  S_GREEN), _p("[MARKOV]", S_SRM)],
+        [_p(T["conversion"], S_LEFT),
          _p("{:.0f}%".format(p_complete_before_pct), S_CENTER),
          _p("{:.0f}%".format(p_complete_after_pct),  S_CENTER),
-         _p("{:,.0f}".format(markov_gain),      S_GREEN), _p("[МАРКОВ]", S_SRM2)],
+         _p("{:,.0f}".format(markov_gain_c),     S_GREEN), _p("[MARKOV]", S_SRM2)],
     ]
     m_data = [m_hdr] + m_rows
     m_ts = _ts_base(bg=GRAY_D, grid=ACCENT) + [
@@ -202,13 +346,13 @@ def build_roi_passport_pdf(
 
     # ── 4. FINANCIAL MODEL ─────────────────────────────────────────────────────
     fin_data = [
-        [_p("+ Экономия времени",    S_FL), _p("{:,.0f} EUR".format(time_saved),           S_FV)],
-        [_p("+ Снижение ошибок",     S_FL), _p("{:,.0f} EUR".format(error_reduction),       S_FV)],
-        [_p("+ Выручка (скорость)",  S_FL), _p("{:,.0f} EUR".format(revenue_impact),        S_FV)],
-        [_p("+ Выручка (конверсия)", S_FL), _p("{:,.0f} EUR".format(markov_gain),           S_FV)],
-        [_p("= Суммарная выгода",    S_FL), _p("{:,.0f} EUR".format(total_benefit),         S_FV)],
-        [_p("− Инвестиции",          S_FL), _p("{:,.0f} EUR".format(implementation_cost),   S_FN)],
-        [_p("= ЧИСТЫЙ ROI",          S_FNL),_p("{:,.0f} EUR".format(net_roi),               S_FNV)],
+        [_p(T["t_time_saved"], S_FL), _p("{:,.0f} {}".format(time_saved_c,      cs), S_FV)],
+        [_p(T["t_error_red"],  S_FL), _p("{:,.0f} {}".format(error_reduction_c, cs), S_FV)],
+        [_p(T["t_rev_speed"],  S_FL), _p("{:,.0f} {}".format(revenue_impact_c,  cs), S_FV)],
+        [_p(T["t_rev_conv"],   S_FL), _p("{:,.0f} {}".format(markov_gain_c,     cs), S_FV)],
+        [_p(T["t_total"],      S_FL), _p("{:,.0f} {}".format(total_benefit,     cs), S_FV)],
+        [_p(T["t_invest"],     S_FL), _p("{:,.0f} {}".format(implementation_c,  cs), S_FN)],
+        [_p(T["t_net_roi"],    S_FNL),_p("{:,.0f} {}".format(net_roi_c,         cs), S_FNV)],
     ]
     fin_ts = _ts_base(bg=GRAY_D, grid=GRAY_D) + [
         ("BACKGROUND",    (0, 4), (-1, 4), DARK_BG),
@@ -222,18 +366,18 @@ def build_roi_passport_pdf(
     story.append(Spacer(1, 4*mm))
 
     # ── 5. MATH MODELS ─────────────────────────────────────────────────────────
-    math_hdr = [_p("Модель", S_BOLD_C), _p("Параметр", S_BOLD_C),
-                _p("Результат", S_BOLD_C), _p("Интерпретация", S_BOLD_C)]
+    math_hdr = [_p(T["model"], S_BOLD_C), _p(T["param"], S_BOLD_C),
+                _p(T["result"], S_BOLD_C), _p(T["interpretation"], S_BOLD_C)]
     math_rows = [
-        [_p("[ГРАФ]",    S_MG), _p("Узкое место", S_LEFT),
+        [_p("[GRAPH]",   S_MG), _p(T["bottleneck_p"], S_LEFT),
          _p("{} / {:.4f}".format(bottleneck_node, bottleneck_score), S_CENTER),
-         _p("Приоритет оптимизации процесса", S_LEFT)],
-        [_p("[МАРКОВ]",  S_MM), _p("P(завершение)", S_LEFT),
+         _p(T["bottleneck_i"], S_LEFT)],
+        [_p("[MARKOV]",  S_MM), _p(T["p_complete_p"], S_LEFT),
          _p("{:.0f}% → {:.0f}%".format(p_complete_before_pct, p_complete_after_pct), S_CENTER),
-         _p("Рост конверсии через цепи Маркова", S_LEFT)],
-        [_p("[БАЙЕС]",   S_MB), _p("Доверие к результату", S_LEFT),
+         _p(T["markov_i"], S_LEFT)],
+        [_p("[BAYES]",   S_MB), _p(T["bayes_p"], S_LEFT),
          _p("{:.1f}% → {:.1f}%".format(bayes_prior, bayes_posterior), S_CENTER),
-         _p("80% ДИ: {}".format(bayes_ci), S_LEFT)],
+         _p(T["ci_label"].format(bayes_ci), S_LEFT)],
     ]
     math_data = [math_hdr] + math_rows
     math_ts = _ts_base(bg=GRAY_D, grid=ACCENT) + [
@@ -247,12 +391,12 @@ def build_roi_passport_pdf(
 
     # ── 6. SUCCESS FEE ─────────────────────────────────────────────────────────
     fee_data = [
-        [_p("Формат оплаты", S_BOLD_C), _p("Порог", S_BOLD_C),
-         _p("Доля", S_BOLD_C), _p("Оценка Year-1", S_BOLD_C)],
-        [_p("Подписка + Success Fee", S_CENTER),
-         _p("{:,.0f} EUR".format(success_fee_threshold), S_CENTER),
+        [_p(T["fee_format"], S_BOLD_C), _p(T["fee_threshold"], S_BOLD_C),
+         _p(T["fee_share"], S_BOLD_C), _p(T["fee_year1"], S_BOLD_C)],
+        [_p(T["fee_model"], S_CENTER),
+         _p("{:,.0f} {}".format(fee_threshold_c, cs), S_CENTER),
          _p("{}%".format(success_fee_pct), S_CENTER),
-         _p("{:,.0f} EUR".format(year1_fee), S_SFY)],
+         _p("{:,.0f} {}".format(year1_fee, cs), S_SFY)],
     ]
     fee_ts = _ts_base(bg=GRAY_D, grid=ACCENT) + [
         ("BACKGROUND", (0, 0), (-1, 0), DARK_BG),
@@ -267,7 +411,7 @@ def build_roi_passport_pdf(
     # ── 7. MEETING NOTES ───────────────────────────────────────────────────────
     if meeting_notes and meeting_notes.strip():
         notes_data = [
-            [_p("Заметки встречи", S_BOLD_L)],
+            [_p(T["notes_title"], S_BOLD_L)],
             [_p(meeting_notes.strip(), S_NOTES)],
         ]
         notes_ts = _ts_base(bg=DARK_BG, grid=ACCENT) + [
@@ -284,9 +428,9 @@ def build_roi_passport_pdf(
     qr_img = _make_qr(contact_url, size_cm=2.5) if contact_url else None
 
     footer_text = [
-        [_p("Следующий шаг:", S_BOLD_L),
-         _p("Передать отчёт команде внедрения и согласовать план-график автоматизации.", S_LEFT)],
-        [_p("Аудитор:", S_BOLD_L),
+        [_p(T["next_step"], S_BOLD_L),
+         _p(T["next_body"], S_LEFT)],
+        [_p(T["auditor_lbl"], S_BOLD_L),
          _p("{} | OmniCore ROI Auditor v1.0 | {}".format(auditor_name, today_str), S_LEFT)],
     ]
     foot_ts = _ts_base(bg=DARK_BG, grid=ACCENT) + [
