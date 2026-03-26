@@ -35,7 +35,7 @@ with st.sidebar:
               text-transform:uppercase;color:rgba(255,255,255,0.45);
               margin-bottom:4px;">Demo mode</div>
   <div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">
-    Sign in for full access
+    Sign in to upload CSV data<br>and generate PDF reports
   </div>
 </div>
 """, unsafe_allow_html=True)
