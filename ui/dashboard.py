@@ -1167,14 +1167,21 @@ def run_dashboard():
             textfont=dict(size=10, color=_C["gold"]),
             yaxis="y2",
         ))
+        _proj_layout = {k: v for k, v in CHART_LAYOUT.items() if k not in ("xaxis", "yaxis")}
         _fig_proj.update_layout(
-            yaxis=dict(title=t(lang, "proj_benefit")),
+            yaxis=dict(
+                title=t(lang, "proj_benefit"),
+                gridcolor="rgba(0,0,0,0.05)", gridwidth=1,
+                linecolor="rgba(0,0,0,0.06)", zeroline=False,
+                tickfont=dict(color="#AEAEB2", size=11),
+            ),
             yaxis2=dict(
                 title=t(lang, "proj_cum_npv"),
                 overlaying="y", side="right", showgrid=False,
+                tickfont=dict(color="#AEAEB2", size=11),
             ),
             barmode="group",
             height=380,
-            **CHART_LAYOUT,
+            **_proj_layout,
         )
         st.plotly_chart(_fig_proj, width="stretch")
