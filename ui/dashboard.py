@@ -288,6 +288,15 @@ def run_dashboard():
     }
     /* Presentation mode */
     body.pres-mode [data-testid="stSidebar"] { display: none !important; }
+
+    /* Hide Streamlit toolbar, header, footer */
+    header, footer, #MainMenu,
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
