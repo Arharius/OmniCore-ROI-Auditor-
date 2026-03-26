@@ -1,5 +1,7 @@
 import sys
 import os
+import json
+from datetime import datetime
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
@@ -17,8 +19,73 @@ from exports.pdf_generator import build_roi_passport_pdf
 from ui.i18n import TRANSLATIONS, LANG_NAMES, t
 
 
+# ── Currency ───────────────────────────────────────────────────────────────────
+_CURRENCIES = {
+    "EUR": {"sym": "€",    "rate": 1.0,   "label": "EUR"},
+    "RUB": {"sym": "₽",    "rate": 100.0, "label": "RUB"},
+    "RSD": {"sym": "дин.", "rate": 117.0, "label": "RSD"},
+}
 
-# ── Demo presets ──────────────────────────────────────────────────────────────
+def _fmt(val_eur: float, currency: str) -> str:
+    cur = _CURRENCIES.get(currency, _CURRENCIES["EUR"])
+    converted = val_eur * cur["rate"]
+    if abs(converted) >= 1_000_000:
+        return "{:,.0f} {}".format(converted / 1_000_000, cur["sym"] + "M")
+    return "{:,.0f} {}".format(converted, cur["sym"])
+
+
+# ── Industry benchmarks (avg ROI %, avg payback months) ───────────────────────
+_BENCHMARKS = {
+    "logistics": {"roi_pct": 280, "payback": 2.8, "net_roi_mult": 6.2},
+    "agency":    {"roi_pct": 420, "payback": 1.9, "net_roi_mult": 8.5},
+    "retail":    {"roi_pct": 190, "payback": 3.5, "net_roi_mult": 4.1},
+    None:        {"roi_pct": 300, "payback": 2.5, "net_roi_mult": 6.0},
+}
+
+
+# ── Client history ─────────────────────────────────────────────────────────────
+_HISTORY_FILE = os.path.join(parent_dir, "data", "clients.json")
+
+_PARAM_KEYS = ["manual_hours", "automation_rate", "hour_rate",
+               "error_before", "error_after", "cost_per_error", "volume",
+               "cycle_before", "cycle_after", "deals_month", "deal_value",
+               "p_before", "p_after", "impl_cost"]
+
+def _load_history() -> list:
+    try:
+        if os.path.exists(_HISTORY_FILE):
+            with open(_HISTORY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return []
+
+def _save_to_history(company_name: str) -> bool:
+    try:
+        params = {k: st.session_state.get(k) for k in _PARAM_KEYS}
+        history = _load_history()
+        history = [h for h in history if h.get("company_name") != company_name]
+        history.insert(0, {
+            "company_name": company_name,
+            "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "params": params,
+        })
+        history = history[:15]
+        os.makedirs(os.path.dirname(_HISTORY_FILE), exist_ok=True)
+        with open(_HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:
+        return False
+
+def _restore_from_history(entry: dict):
+    st.session_state["company_name"] = entry.get("company_name", "")
+    for k, v in entry.get("params", {}).items():
+        if v is not None:
+            st.session_state[k] = v
+
+
+# ── Demo presets ───────────────────────────────────────────────────────────────
 DEMO_PRESETS = {
     "logistics": {
         "labels": {"en": "Logistics", "ru": "Логистика", "sr": "Logistika"},
@@ -81,7 +148,7 @@ def _clear_demo():
     st.session_state.pop("demo_preset", None)
 
 
-# ── Chart colour palette (Apple HIG) ──────────────────────────────────────
+# ── Chart colour palette ───────────────────────────────────────────────────────
 _C = dict(
     navy="#0071E3", green="#34C759", gold="#FF9F0A",
     red="#FF3B30",  purple="#AF52DE", amber="#FF9F0A",
@@ -111,26 +178,19 @@ CHART_LAYOUT = dict(
 )
 
 
-
 def run_dashboard():
 
+    # ── CSS ────────────────────────────────────────────────────────────────────
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    /* ─── System font stack — uses SF Pro on Apple devices ── */
     *, *::before, *::after { box-sizing: border-box; }
     html, body, [class*="css"] {
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text',
                      'Inter', 'Helvetica Neue', Arial, sans-serif !important;
         -webkit-font-smoothing: antialiased !important;
-        -moz-osx-font-smoothing: grayscale !important;
     }
-
-    /* ─── App Shell — apple.com #F5F5F7 ─────────────── */
     .stApp { background: #F5F5F7 !important; }
-
-    /* ─── Sidebar — pure white, zero decoration ─────── */
     [data-testid="stSidebar"] {
         background: #FFFFFF !important;
         border-right: 1px solid rgba(0,0,0,0.08) !important;
@@ -139,264 +199,135 @@ def run_dashboard():
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] .stMarkdown p,
     [data-testid="stSidebar"] .stCaption {
-        color: #6E6E73 !important;
-        font-size: 13px !important;
-        line-height: 1.5 !important;
+        color: #6E6E73 !important; font-size: 13px !important; line-height: 1.5 !important;
     }
     [data-testid="stSidebar"] h2 {
-        color: #1D1D1F !important;
-        font-size: 17px !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.02em !important;
-        text-transform: none !important;
+        color: #1D1D1F !important; font-size: 17px !important;
+        font-weight: 600 !important; letter-spacing: -0.02em !important;
     }
-
-    /* ─── KPI Cards — white, big radius, whisper shadow ─ */
     [data-testid="metric-container"] {
-        background: #FFFFFF !important;
-        border-radius: 18px !important;
-        padding: 24px 26px !important;
-        border: none !important;
+        background: #FFFFFF !important; border-radius: 18px !important;
+        padding: 24px 26px !important; border: none !important;
         box-shadow: 0 2px 20px rgba(0,0,0,0.08) !important;
         transition: box-shadow 0.3s ease, transform 0.3s ease !important;
     }
     [data-testid="metric-container"]:hover {
-        box-shadow: 0 4px 32px rgba(0,0,0,0.13) !important;
-        transform: scale(1.015) !important;
+        box-shadow: 0 4px 32px rgba(0,0,0,0.13) !important; transform: scale(1.015) !important;
     }
     [data-testid="stMetricLabel"] > div {
-        color: #6E6E73 !important;
-        font-size: 13px !important;
-        font-weight: 400 !important;
-        letter-spacing: 0 !important;
-        text-transform: none !important;
+        color: #6E6E73 !important; font-size: 13px !important; font-weight: 400 !important;
     }
     [data-testid="stMetricValue"] > div {
-        color: #34C759 !important;
-        font-size: 32px !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.04em !important;
-        line-height: 1.05 !important;
+        color: #34C759 !important; font-size: 32px !important;
+        font-weight: 700 !important; letter-spacing: -0.04em !important;
     }
-    [data-testid="stMetricDelta"] > div {
-        font-size: 13px !important;
-        font-weight: 400 !important;
-    }
-
-    /* ─── Tabs — SF-style segmented feel ────────────── */
+    [data-testid="stMetricDelta"] > div { font-size: 13px !important; font-weight: 400 !important; }
     .stTabs [data-baseweb="tab-list"] {
         background: transparent !important;
-        border-bottom: 1px solid rgba(0,0,0,0.10) !important;
-        gap: 0 !important;
+        border-bottom: 1px solid rgba(0,0,0,0.10) !important; gap: 0 !important;
     }
     .stTabs [data-baseweb="tab"] {
-        background: transparent !important;
-        color: #6E6E73 !important;
-        font-size: 15px !important;
-        font-weight: 400 !important;
-        letter-spacing: -0.01em !important;
-        text-transform: none !important;
-        border: none !important;
-        border-radius: 0 !important;
-        padding: 12px 22px !important;
-        transition: color 0.2s !important;
+        background: transparent !important; color: #6E6E73 !important;
+        font-size: 15px !important; font-weight: 400 !important;
+        border: none !important; border-radius: 0 !important; padding: 12px 22px !important;
     }
-    .stTabs [data-baseweb="tab"]:hover { color: #1D1D1F !important; }
     .stTabs [aria-selected="true"] {
-        color: #0071E3 !important;
-        font-weight: 500 !important;
-        border-bottom: 2px solid #0071E3 !important;
-        background: transparent !important;
+        color: #0071E3 !important; font-weight: 500 !important;
+        border-bottom: 2px solid #0071E3 !important; background: transparent !important;
     }
-
-    /* ─── Typography — SF Pro scale ─────────────────── */
     [data-testid="stMarkdownContainer"] h1 {
-        font-size: 28px !important;
-        font-weight: 700 !important;
-        color: #1D1D1F !important;
-        letter-spacing: -0.035em !important;
-        line-height: 1.15 !important;
+        font-size: 28px !important; font-weight: 700 !important;
+        color: #1D1D1F !important; letter-spacing: -0.035em !important;
     }
     [data-testid="stMarkdownContainer"] h2,
     [data-testid="stMarkdownContainer"] h3 {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        color: #6E6E73 !important;
-        letter-spacing: -0.01em !important;
-        text-transform: none !important;
+        font-size: 13px !important; font-weight: 600 !important;
+        color: #6E6E73 !important; letter-spacing: -0.01em !important;
     }
-    [data-testid="stMarkdownContainer"] p {
-        color: #1D1D1F !important;
-        font-size: 15px !important;
-        line-height: 1.6 !important;
-    }
+    [data-testid="stMarkdownContainer"] p { color: #1D1D1F !important; font-size: 15px !important; }
     [data-testid="stHeadingWithActionElements"] h2,
     [data-testid="stHeadingWithActionElements"] h3 {
-        color: #6E6E73 !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.01em !important;
-        text-transform: none !important;
+        color: #6E6E73 !important; font-size: 13px !important; font-weight: 600 !important;
     }
-
-    /* ─── Buttons — Apple pill style (main area only) ── */
-    div.stDownloadButton > button,
-    div.stButton > button {
-        background: #0071E3 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 980px !important;
-        font-size: 15px !important;
-        font-weight: 400 !important;
-        letter-spacing: -0.01em !important;
-        padding: 10px 22px !important;
-        width: auto !important;
-        min-width: 120px !important;
-        box-shadow: none !important;
-        transition: background 0.2s ease, opacity 0.2s ease !important;
+    div.stDownloadButton > button, div.stButton > button {
+        background: #0071E3 !important; color: #FFFFFF !important; border: none !important;
+        border-radius: 980px !important; font-size: 15px !important; font-weight: 400 !important;
+        padding: 10px 22px !important; min-width: 120px !important;
+        transition: background 0.2s ease !important;
     }
-    div.stDownloadButton > button:hover,
-    div.stButton > button:hover {
-        background: #0077ED !important;
-        opacity: 0.92 !important;
+    div.stDownloadButton > button:hover, div.stButton > button:hover {
+        background: #0077ED !important; opacity: 0.92 !important;
     }
-
-    /* ─── Sidebar buttons — subtle / secondary ───────── */
     [data-testid="stSidebar"] div.stButton > button {
-        background: #F5F5F7 !important;
-        color: #1D1D1F !important;
-        border: 1px solid rgba(0,0,0,0.10) !important;
-        border-radius: 8px !important;
-        font-size: 13px !important;
-        font-weight: 500 !important;
-        padding: 6px 10px !important;
-        min-width: unset !important;
-        min-height: unset !important;
-        height: auto !important;
-        line-height: 1.3 !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        box-shadow: none !important;
+        background: #F5F5F7 !important; color: #1D1D1F !important;
+        border: 1px solid rgba(0,0,0,0.10) !important; border-radius: 8px !important;
+        font-size: 13px !important; font-weight: 500 !important; padding: 6px 10px !important;
+        min-width: unset !important; min-height: unset !important;
+        white-space: nowrap !important; overflow: hidden !important;
+        text-overflow: ellipsis !important; box-shadow: none !important;
     }
-    [data-testid="stSidebar"] div.stButton > button:hover {
-        background: #E8E8ED !important;
-        opacity: 1 !important;
-    }
-
-    /* ─── Radio & labels ─────────────────────────────── */
-    div[data-testid="stRadio"] > label {
-        color: #6E6E73 !important;
-        font-size: 13px !important;
-        font-weight: 400 !important;
-        letter-spacing: 0 !important;
-        text-transform: none !important;
-    }
-    div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
-        color: #1D1D1F !important;
-        font-size: 15px !important;
-        font-weight: 400 !important;
-        text-transform: none !important;
-    }
-
-    /* ─── Sliders — Apple blue thumb ────────────────── */
-    [data-testid="stSlider"] [data-testid="stTickBarMin"],
-    [data-testid="stSlider"] [data-testid="stTickBarMax"] { color: #AEAEB2 !important; }
+    [data-testid="stSidebar"] div.stButton > button:hover { background: #E8E8ED !important; }
+    div[data-testid="stRadio"] > label { color: #6E6E73 !important; font-size: 13px !important; }
     [data-testid="stSlider"] > div > div > div > div { background: #0071E3 !important; }
-
-    /* ─── Inputs ─────────────────────────────────────── */
-    [data-testid="stNumberInput"] input,
-    [data-testid="stTextInput"] input {
-        border: 1px solid rgba(0,0,0,0.12) !important;
-        border-radius: 10px !important;
-        font-size: 15px !important;
-        background: #FFFFFF !important;
-        color: #1D1D1F !important;
-        padding: 8px 12px !important;
+    [data-testid="stNumberInput"] input, [data-testid="stTextInput"] input {
+        border: 1px solid rgba(0,0,0,0.12) !important; border-radius: 10px !important;
+        font-size: 15px !important; background: #FFFFFF !important; color: #1D1D1F !important;
     }
-    [data-testid="stNumberInput"] input:focus,
-    [data-testid="stTextInput"] input:focus {
-        border-color: #0071E3 !important;
-        box-shadow: 0 0 0 3px rgba(0,113,227,0.15) !important;
-        outline: none !important;
-    }
-
-    /* ─── Data Tables ────────────────────────────────── */
     [data-testid="stDataFrame"] {
-        background: #FFFFFF !important;
-        border: none !important;
-        border-radius: 16px !important;
-        overflow: hidden !important;
+        background: #FFFFFF !important; border-radius: 16px !important;
         box-shadow: 0 2px 20px rgba(0,0,0,0.08) !important;
     }
-    [data-testid="stDataFrame"] th {
-        background: #F5F5F7 !important;
-        color: #6E6E73 !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.04em !important;
-        text-transform: uppercase !important;
-        border-bottom: 1px solid rgba(0,0,0,0.06) !important;
-    }
-    [data-testid="stDataFrame"] td {
-        color: #1D1D1F !important;
-        font-size: 14px !important;
-        border-bottom: 1px solid rgba(0,0,0,0.04) !important;
-    }
-
-    /* ─── Code blocks ────────────────────────────────── */
-    [data-testid="stCode"] {
-        background: #F5F5F7 !important;
-        border: none !important;
-        border-radius: 12px !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
-    }
-    [data-testid="stCode"] code {
-        color: #1D1D1F !important;
-        font-size: 13px !important;
-        font-family: 'SF Mono', 'Fira Code', monospace !important;
-    }
-
-    /* ─── Alerts ─────────────────────────────────────── */
     [data-testid="stAlert"] {
         background: rgba(0,113,227,0.06) !important;
-        border: 1px solid rgba(0,113,227,0.18) !important;
-        border-radius: 12px !important;
-        color: #0055B3 !important;
+        border: 1px solid rgba(0,113,227,0.18) !important; border-radius: 12px !important;
     }
-    [data-testid="stAlert"] p { color: #0055B3 !important; font-size: 14px !important; }
-
-    /* ─── Dividers ───────────────────────────────────── */
     hr { border: none !important; border-top: 1px solid rgba(0,0,0,0.08) !important; }
-
-    /* ─── Expanders ──────────────────────────────────── */
     [data-testid="stExpander"] {
-        border: none !important;
-        border-radius: 16px !important;
-        background: #FFFFFF !important;
-        box-shadow: 0 2px 16px rgba(0,0,0,0.07) !important;
+        border: none !important; border-radius: 16px !important;
+        background: #FFFFFF !important; box-shadow: 0 2px 16px rgba(0,0,0,0.07) !important;
     }
+    /* Presentation mode */
+    body.pres-mode [data-testid="stSidebar"] { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    # ── Demo gate ─────────────────────────────────────────────────────────────────
+    # ── Demo / auth gate ───────────────────────────────────────────────────────
     is_demo = st.session_state.get("demo_only", False) and \
               not st.session_state.get("authenticated", False)
 
-    # ── SIDEBAR ───────────────────────────────────────────────────────────────────
-    if "lang_select" not in st.session_state:
-        st.session_state["lang_select"] = "ru"
+    # ── Presentation mode CSS toggle ───────────────────────────────────────────
+    if st.session_state.get("presentation_mode"):
+        st.markdown("""
+        <style>
+        [data-testid="stSidebar"] { display: none !important; }
+        .block-container { padding-left: 2rem !important; padding-right: 2rem !important; max-width: 100% !important; }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # ── SIDEBAR ────────────────────────────────────────────────────────────────
+    st.session_state.setdefault("lang_select", "ru")
+    st.session_state.setdefault("currency_select", "EUR")
+    st.session_state.setdefault("presentation_mode", False)
+    st.session_state.setdefault("auditor_name", "Andrew | AI Product Advisor")
+    st.session_state.setdefault("contact_url", "https://t.me/weerowoolf")
 
     with st.sidebar:
         lang = st.radio(
-            "🌐 Language / Язык / Jezik",
+            "Language / Язык / Jezik",
             options=list(LANG_NAMES.keys()),
             format_func=lambda k: LANG_NAMES[k],
             horizontal=True,
             key="lang_select",
         )
 
-        # ── Demo preset switcher ───────────────────────────────────────────────
+        # Presentation mode toggle
+        pres_label = t(lang, "presentation_off") if st.session_state["presentation_mode"] \
+                     else t(lang, "presentation_on")
+        if st.button(pres_label, key="btn_pres", use_container_width=True):
+            st.session_state["presentation_mode"] = not st.session_state["presentation_mode"]
+            st.rerun()
+
+        # Demo presets
         _demo_labels = {
             "en": ("Demo cases", "Run live audit"),
             "ru": ("Демо-кейсы", "Живой аудит"),
@@ -404,25 +335,31 @@ def run_dashboard():
         }
         st.markdown(
             f'<div style="font-size:11px;font-weight:600;color:#AEAEB2;'
-            f'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">'
+            f'letter-spacing:0.08em;text-transform:uppercase;margin:8px 0 6px;">'
             f'{_demo_labels[lang][0]}</div>',
             unsafe_allow_html=True,
         )
         _active = st.session_state.get("demo_preset")
         _dc1, _dc2, _dc3 = st.columns(3)
-        if _dc1.button(DEMO_PRESETS["logistics"]["labels"][lang],
-                       key="btn_logistics", use_container_width=True):
+        if _dc1.button(DEMO_PRESETS["logistics"]["labels"][lang], key="btn_logistics", use_container_width=True):
             _apply_preset("logistics"); st.rerun()
-        if _dc2.button(DEMO_PRESETS["agency"]["labels"][lang],
-                       key="btn_agency", use_container_width=True):
+        if _dc2.button(DEMO_PRESETS["agency"]["labels"][lang], key="btn_agency", use_container_width=True):
             _apply_preset("agency"); st.rerun()
-        if _dc3.button(DEMO_PRESETS["retail"]["labels"][lang],
-                       key="btn_retail", use_container_width=True):
+        if _dc3.button(DEMO_PRESETS["retail"]["labels"][lang], key="btn_retail", use_container_width=True):
             _apply_preset("retail"); st.rerun()
         if _active:
             if st.button(_demo_labels[lang][1], key="btn_live", use_container_width=True):
-                _clear_demo()
-                st.rerun()
+                _clear_demo(); st.rerun()
+
+        st.markdown("---")
+
+        # Currency selector (3)
+        currency = st.radio(
+            t(lang, "currency_label"),
+            options=list(_CURRENCIES.keys()),
+            horizontal=True,
+            key="currency_select",
+        )
 
         st.markdown("---")
         st.markdown("## " + t(lang, "sidebar_title"))
@@ -431,9 +368,9 @@ def run_dashboard():
         company_name = st.text_input(t(lang, "company_label"), key="company_name")
 
         if is_demo:
-            _lock_csv = {"en": "🔐 Upload your own CSV — available after login",
-                         "ru": "🔐 Загрузка CSV доступна после входа",
-                         "sr": "🔐 Učitavanje CSV dostupno nakon prijave"}
+            _lock_csv = {"en": "Upload CSV available after login",
+                         "ru": "Загрузка CSV доступна после входа",
+                         "sr": "Učitavanje CSV dostupno nakon prijave"}
             st.info(_lock_csv[lang])
             csv_file = None
         else:
@@ -476,9 +413,37 @@ def run_dashboard():
         impl_cost = st.slider(t(lang, "impl_cost"), 5000, 100000, step=1000, key="impl_cost")
 
         st.markdown("---")
+
+        # Auditor settings (8)
+        st.markdown(t(lang, "auditor_section"))
+        auditor_name = st.text_input(t(lang, "auditor_name_label"), key="auditor_name")
+        contact_url  = st.text_input(t(lang, "contact_url_label"),  key="contact_url")
+
+        st.markdown("---")
+
+        # Client history (1)
+        st.markdown(t(lang, "history_section"))
+        h_col1, h_col2 = st.columns(2)
+        if h_col1.button(t(lang, "save_client"), key="btn_save_hist", use_container_width=True):
+            if _save_to_history(company_name):
+                st.toast(t(lang, "saved_ok"))
+
+        history = _load_history()
+        if history:
+            _options = [""] + ["{} ({})".format(h["company_name"], h["saved_at"]) for h in history]
+            _sel = h_col2.selectbox(t(lang, "load_label"), _options, key="hist_sel",
+                                    label_visibility="collapsed")
+            if _sel:
+                _idx = _options.index(_sel) - 1
+                _restore_from_history(history[_idx])
+                st.rerun()
+        else:
+            h_col2.caption(t(lang, "no_history"))
+
+        st.markdown("---")
         st.caption(t(lang, "footer"))
 
-    # ── COMPUTE ───────────────────────────────────────────────────────────────────
+    # ── COMPUTE ────────────────────────────────────────────────────────────────
     math_eng = MathEngine()
     roi_eng  = ROIEngine()
 
@@ -526,7 +491,6 @@ def run_dashboard():
                    ["Kvalifikacija", "Ponuda"])
 
     state_times = np.full(len(m_states), float(cycle_before) * 24 / max(len(m_states), 1))
-
     try:
         markov_res = math_eng.markov_absorbing(
             Q_mat, state_times, m_states,
@@ -539,14 +503,24 @@ def run_dashboard():
         markov_res = None
         N_mat = None
 
-    # ── HEADER ────────────────────────────────────────────────────────────────────
+    # ── Benchmarks ─────────────────────────────────────────────────────────────
+    _preset_key = st.session_state.get("demo_preset")
+    _bench = _BENCHMARKS.get(_preset_key, _BENCHMARKS[None])
+    _bench_roi_eur = impl_cost * _bench["net_roi_mult"]
+
+    # ── HEADER ─────────────────────────────────────────────────────────────────
+    if st.session_state.get("presentation_mode"):
+        # Presentation mode: clean exit button
+        if st.button(t(lang, "presentation_off"), key="pres_exit_top"):
+            st.session_state["presentation_mode"] = False
+            st.rerun()
+
     st.markdown(
         '<div style="margin-bottom:4px;">'
         '<span style="font-size:28px;font-weight:700;color:#1D1D1F;letter-spacing:-0.035em;'
         'font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
         + t(lang, "app_title") +
-        '</span>'
-        '</div>'
+        '</span></div>'
         '<div style="font-size:15px;color:#6E6E73;font-weight:400;letter-spacing:-0.01em;'
         'margin-bottom:24px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
         + company_name + '&ensp;·&ensp;' + t(lang, "app_subtitle") +
@@ -554,7 +528,7 @@ def run_dashboard():
         unsafe_allow_html=True,
     )
 
-    # ── Demo banner ───────────────────────────────────────────────────────────────
+    # Demo banner
     _active_preset = st.session_state.get("demo_preset")
     if _active_preset and _active_preset in DEMO_PRESETS:
         _p_data = DEMO_PRESETS[_active_preset]
@@ -571,34 +545,40 @@ def run_dashboard():
             f'<div>'
             f'<div style="font-size:14px;font-weight:600;color:#0071E3;">{_label} — {_b_desc}</div>'
             f'<div style="font-size:12px;color:#AEAEB2;margin-top:2px;">{_b_hint}</div>'
-            f'</div>'
-            f'</div>',
+            f'</div></div>',
             unsafe_allow_html=True,
         )
 
+    # ── KPI cards with benchmark delta (6) ─────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric(t(lang, "metric_net_roi"),  "{:,.0f} €".format(res.net_roi))
-    c2.metric(t(lang, "metric_payback"),  "{:.1f} {}".format(res.payback_months, t(lang, "months")))
-    c3.metric(t(lang, "metric_bayes"),    "{:.1f}%".format(res.bayesian_posterior_pct))
-    c4.metric(t(lang, "metric_impl"),     "{:,.0f} €".format(impl_cost))
+    _roi_delta = res.net_roi - _bench_roi_eur
+    _pay_delta = _bench["payback"] - res.payback_months
+    c1.metric(
+        t(lang, "metric_net_roi"),
+        _fmt(res.net_roi, currency),
+        delta="{:+,.0f}€ {}".format(_roi_delta, t(lang, "vs_industry")),
+        delta_color="normal",
+    )
+    c2.metric(
+        t(lang, "metric_payback"),
+        "{:.1f} {}".format(res.payback_months, t(lang, "months")),
+        delta="{:+.1f} мес {}".format(_pay_delta, t(lang, "vs_industry")),
+        delta_color="normal",
+    )
+    c3.metric(t(lang, "metric_bayes"), "{:.1f}%".format(res.bayesian_posterior_pct))
+    c4.metric(t(lang, "metric_impl"), _fmt(impl_cost, currency))
 
     st.markdown("---")
 
-    # ── TABS ──────────────────────────────────────────────────────────────────────
+    # ── TABS ───────────────────────────────────────────────────────────────────
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        t(lang, "tab_roi"),
-        t(lang, "tab_graph"),
-        t(lang, "tab_markov"),
-        t(lang, "tab_bayes"),
-        t(lang, "tab_passport"),
+        t(lang, "tab_roi"), t(lang, "tab_graph"), t(lang, "tab_markov"),
+        t(lang, "tab_bayes"), t(lang, "tab_passport"),
     ])
 
-    # ────────────────────────────────────────────────────────────────────
-    # TAB 1 — ROI BREAKDOWN
-    # ────────────────────────────────────────────────────────────────────
+    # ── TAB 1: ROI BREAKDOWN ───────────────────────────────────────────────────
     with tab1:
         st.subheader(t(lang, "waterfall_title"))
-
         labels   = [t(lang, "time_saved"), t(lang, "error_saved"),
                     t(lang, "revenue_speed"), t(lang, "revenue_conv"),
                     t(lang, "investment"), t(lang, "net_roi")]
@@ -614,15 +594,13 @@ def run_dashboard():
             increasing=dict(marker_color=_C["green"]),
             decreasing=dict(marker_color=_C["red"]),
             totals=dict(marker_color=_C["navy"]),
-            texttemplate="%{y:,.0f} €",
-            textposition="outside",
+            texttemplate="%{y:,.0f} €", textposition="outside",
             textfont=dict(color="#7a8499", size=10),
         ))
         fig_wf.update_layout(showlegend=False, height=420, **CHART_LAYOUT)
         st.plotly_chart(fig_wf, width="stretch")
 
         col_p, col_t = st.columns(2)
-
         with col_p:
             st.subheader(t(lang, "pie_title"))
             pie_labels = [t(lang, "time_saved"), t(lang, "error_saved"),
@@ -635,8 +613,7 @@ def run_dashboard():
                     colors=[_C["green"], _C["navy"], _C["purple"], _C["amber"]],
                     line=dict(color="rgba(240,236,228,1)", width=2),
                 ),
-                textinfo="label+percent",
-                textfont=dict(color="#4a5168", size=11),
+                textinfo="label+percent", textfont=dict(color="#4a5168", size=11),
             ))
             fig_pie.update_layout(height=360, **CHART_LAYOUT)
             st.plotly_chart(fig_pie, width="stretch")
@@ -644,217 +621,212 @@ def run_dashboard():
         with col_t:
             st.subheader("")
             st.markdown("<br>", unsafe_allow_html=True)
+            _cur_sym = _CURRENCIES[currency]["sym"]
+            _rate    = _CURRENCIES[currency]["rate"]
             df_bd = pd.DataFrame({
                 t(lang, "component"): [t(lang, "time_saved"), t(lang, "error_saved"),
                                        t(lang, "revenue_speed"), t(lang, "revenue_conv"),
                                        t(lang, "total"), t(lang, "investment"), t(lang, "net_roi")],
-                t(lang, "eur_year"):  [res.time_saved_annual, res.error_reduction_annual,
-                                       res.revenue_impact_annual, res.markov_gain_annual,
-                                       res.total_benefit, -impl_cost, res.net_roi],
+                f"{_cur_sym}/год":  [round(v * _rate) for v in [
+                    res.time_saved_annual, res.error_reduction_annual,
+                    res.revenue_impact_annual, res.markov_gain_annual,
+                    res.total_benefit, -impl_cost, res.net_roi]],
             })
             st.dataframe(df_bd, height=300)
 
-    # ────────────────────────────────────────────────────────────────────
-    # TAB 2 — GRAPH
-    # ────────────────────────────────────────────────────────────────────
+        # Scenario comparison (5)
+        with st.expander(t(lang, "scenario_section")):
+            sc1, sc2, sc3 = st.columns(3)
+            st.session_state.setdefault("scen_b_auto", min(automation_rate + 10, 95))
+            st.session_state.setdefault("scen_b_cost", max(impl_cost - 3000, 5000))
+            st.session_state.setdefault("scen_b_cycle", max(cycle_after - 2, 1))
+            scen_b_auto  = sc1.slider(t(lang, "scen_b_automation"), 50, 95, key="scen_b_auto")
+            scen_b_cost  = sc2.slider(t(lang, "scen_b_impl_cost"), 5000, 100000, step=1000, key="scen_b_cost")
+            scen_b_cycle = sc3.slider(t(lang, "scen_b_cycle"), 1, 30, key="scen_b_cycle")
+
+            inp_b = ROIInput(
+                company_name=company_name,
+                manual_hours_per_month=float(manual_hours),
+                automation_rate=scen_b_auto / 100.0,
+                hour_rate_eur=float(hour_rate),
+                error_rate_before_pct=float(error_before),
+                error_rate_after_pct=float(error_after),
+                cost_per_error_eur=float(cost_per_error),
+                monthly_volume=int(volume),
+                deal_cycle_before_days=float(cycle_before),
+                deal_cycle_after_days=float(scen_b_cycle),
+                deals_per_month=int(deals),
+                avg_deal_value_eur=float(deal_value),
+                p_complete_before=p_before / 100.0,
+                p_complete_after=p_after / 100.0,
+                implementation_cost_eur=float(scen_b_cost),
+                positive_signals=4, total_signals=5,
+            )
+            res_b = roi_eng.calculate(inp_b)
+
+            df_cmp = pd.DataFrame({
+                "": [t(lang, "net_roi"), t(lang, "metric_payback"), "ROI %"],
+                t(lang, "scenario_a"): [
+                    _fmt(res.net_roi, currency),
+                    "{:.1f} {}".format(res.payback_months, t(lang, "months")),
+                    "{:.0f}%".format(res.roi_pct),
+                ],
+                t(lang, "scenario_b"): [
+                    _fmt(res_b.net_roi, currency),
+                    "{:.1f} {}".format(res_b.payback_months, t(lang, "months")),
+                    "{:.0f}%".format(res_b.roi_pct),
+                ],
+            })
+            st.dataframe(df_cmp, hide_index=True)
+
+    # ── TAB 2: GRAPH ──────────────────────────────────────────────────────────
     with tab2:
         st.subheader(t(lang, "graph_title"))
-        st.info(t(lang, "bottleneck_info",
-                  node=graph_res.bottleneck_node, score=graph_res.bottleneck_score))
-
+        st.info(t(lang, "bottleneck_info", node=graph_res.bottleneck_node, score=graph_res.bottleneck_score))
         nodes = list(graph_res.betweenness.keys())
         node_colors = [_C["red"] if n == graph_res.bottleneck_node else _C["navy"] for n in nodes]
         node_sizes  = [22 + graph_res.betweenness[n] * 200 for n in nodes]
-
-        angle_step = 2 * np.pi / max(len(nodes), 1)
+        angle_step  = 2 * np.pi / max(len(nodes), 1)
         pos = {n: (np.cos(i * angle_step), np.sin(i * angle_step)) for i, n in enumerate(nodes)}
-
         edge_x, edge_y = [], []
         for frm, to, _ in default_edges:
             if frm in pos and to in pos:
                 edge_x += [pos[frm][0], pos[to][0], None]
                 edge_y += [pos[frm][1], pos[to][1], None]
-
         fig_g = go.Figure()
+        fig_g.add_trace(go.Scatter(x=edge_x, y=edge_y, mode="lines",
+                                   line=dict(color="rgba(26,50,113,0.15)", width=1.5), hoverinfo="none"))
         fig_g.add_trace(go.Scatter(
-            x=edge_x, y=edge_y, mode="lines",
-            line=dict(color="rgba(26,50,113,0.15)", width=1.5),
-            hoverinfo="none",
-        ))
-        fig_g.add_trace(go.Scatter(
-            x=[pos[n][0] for n in nodes],
-            y=[pos[n][1] for n in nodes],
-            mode="markers+text",
-            text=nodes,
-            textposition="top center",
+            x=[pos[n][0] for n in nodes], y=[pos[n][1] for n in nodes],
+            mode="markers+text", text=nodes, textposition="top center",
             textfont=dict(color="#1a2744", size=11),
-            marker=dict(color=node_colors, size=node_sizes,
-                        line=dict(color="rgba(255,255,255,0.9)", width=2)),
+            marker=dict(color=node_colors, size=node_sizes, line=dict(color="rgba(255,255,255,0.9)", width=2)),
             hovertemplate="%{text}<br>" + t(lang, "centrality_col") + ": %{customdata:.4f}<extra></extra>",
             customdata=[graph_res.betweenness[n] for n in nodes],
         ))
         _no_axes = {k: v for k, v in CHART_LAYOUT.items() if k not in ("xaxis", "yaxis")}
-        fig_g.update_layout(
-            showlegend=False, height=420,
-            xaxis=dict(visible=False), yaxis=dict(visible=False),
-            **_no_axes,
-        )
+        fig_g.update_layout(showlegend=False, height=420,
+                            xaxis=dict(visible=False), yaxis=dict(visible=False), **_no_axes)
         st.plotly_chart(fig_g, width="stretch")
-
         st.subheader(t(lang, "centrality_table"))
-        df_bt = pd.DataFrame(graph_res.all_nodes_ranked,
-                             columns=[t(lang, "node_col"), t(lang, "centrality_col")])
-        st.dataframe(df_bt, )
+        df_bt = pd.DataFrame(graph_res.all_nodes_ranked, columns=[t(lang, "node_col"), t(lang, "centrality_col")])
+        st.dataframe(df_bt)
 
-    # ────────────────────────────────────────────────────────────────────
-    # TAB 3 — MARKOV
-    # ────────────────────────────────────────────────────────────────────
+    # ── TAB 3: MARKOV ─────────────────────────────────────────────────────────
     with tab3:
         st.subheader(t(lang, "markov_title"))
-
         mc1, mc2, mc3 = st.columns(3)
         mc1.metric(t(lang, "p_before_metric"), "{:.0f}%".format(p_before))
         mc2.metric(t(lang, "p_after_metric"),  "{:.0f}%".format(p_after))
         if markov_res:
             mc3.metric(t(lang, "expected_time"),
                        "{:.1f} {}".format(markov_res.expected_lead_time_hours, t(lang, "hours")))
-
         st.markdown(t(lang, "matrix_q"))
         df_Q = pd.DataFrame(Q_mat, index=m_states, columns=m_states)
-        st.dataframe(df_Q.style.format("{:.4f}"), )
-
+        st.dataframe(df_Q.style.format("{:.4f}"))
         if N_mat is not None:
             st.markdown(t(lang, "matrix_n"))
             df_N = pd.DataFrame(N_mat, index=m_states, columns=m_states)
-            st.dataframe(df_N.style.format("{:.4f}"), )
-
+            st.dataframe(df_N.style.format("{:.4f}"))
         st.markdown(t(lang, "timeline_title"))
         months_range  = list(range(0, 13))
         monthly_gain  = res.total_benefit / 12
         cumulative    = [monthly_gain * m - impl_cost for m in months_range]
-        breakeven_line = [0] * 13
-
         fig_tl = go.Figure()
-        fig_tl.add_trace(go.Scatter(
-            x=months_range, y=cumulative, mode="lines+markers",
-            name=t(lang, "cumulative_roi"),
-            line=dict(color=_C["navy"], width=2.5),
-            marker=dict(size=5, color=_C["navy"],
-                        line=dict(color="#ffffff", width=2)),
-            fill="tozeroy",
-            fillcolor="rgba(26,50,113,0.07)",
-        ))
-        fig_tl.add_trace(go.Scatter(
-            x=months_range, y=breakeven_line, mode="lines",
-            name=t(lang, "breakeven"),
-            line=dict(color=_C["gold"], width=1.5, dash="dot"),
-        ))
-        fig_tl.update_layout(
-            xaxis_title=t(lang, "month_label"),
-            yaxis_title="EUR",
-            height=400,
-            **CHART_LAYOUT,
-        )
+        fig_tl.add_trace(go.Scatter(x=months_range, y=cumulative, mode="lines+markers",
+                                    name=t(lang, "cumulative_roi"),
+                                    line=dict(color=_C["navy"], width=2.5),
+                                    marker=dict(size=5, color=_C["navy"], line=dict(color="#ffffff", width=2)),
+                                    fill="tozeroy", fillcolor="rgba(26,50,113,0.07)"))
+        fig_tl.add_trace(go.Scatter(x=months_range, y=[0]*13, mode="lines",
+                                    name=t(lang, "breakeven"),
+                                    line=dict(color=_C["gold"], width=1.5, dash="dot")))
+        fig_tl.update_layout(xaxis_title=t(lang, "month_label"), yaxis_title="EUR", height=400, **CHART_LAYOUT)
         st.plotly_chart(fig_tl, width="stretch")
 
-    # ────────────────────────────────────────────────────────────────────
-    # TAB 4 — BAYES
-    # ────────────────────────────────────────────────────────────────────
+    # ── TAB 4: BAYES ──────────────────────────────────────────────────────────
     with tab4:
         st.subheader(t(lang, "bayes_title"))
-
         b1, b2 = st.columns(2)
         with b1:
             pos_signals = st.slider(t(lang, "positive_signals"), 1, 50, 4, key="pos_signals")
         with b2:
             tot_signals = st.slider(t(lang, "total_signals"), 2, 100, 5, key="tot_signals")
-
         bayes_live = math_eng.bayesian_update(pos_signals, tot_signals)
-
         bc1, bc2, bc3 = st.columns(3)
         bc1.metric(t(lang, "prior"),     "{:.1f}%".format(bayes_live.prior_pct))
         bc2.metric(t(lang, "posterior"), "{:.1f}%".format(bayes_live.posterior_pct))
-        bc3.metric(t(lang, "ci_80"),
-                   "{}% – {}%".format(bayes_live.ci_80_low, bayes_live.ci_80_high))
-
-        prior_a  = 0.34 * 10
-        prior_b  = (1 - 0.34) * 10
-        post_a   = prior_a + pos_signals
-        post_b   = prior_b + (tot_signals - pos_signals)
+        bc3.metric(t(lang, "ci_80"), "{}% – {}%".format(bayes_live.ci_80_low, bayes_live.ci_80_high))
+        prior_a  = 0.34 * 10; prior_b  = (1 - 0.34) * 10
+        post_a   = prior_a + pos_signals; post_b   = prior_b + (tot_signals - pos_signals)
         x        = np.linspace(0.01, 0.99, 300)
         y_prior  = stats.beta.pdf(x, prior_a, prior_b)
         y_post   = stats.beta.pdf(x, post_a,  post_b)
-
         fig_b = go.Figure()
-        fig_b.add_trace(go.Scatter(
-            x=x * 100, y=y_prior, mode="lines",
-            name=t(lang, "prior_label"),
-            line=dict(color=_C["gold"], width=2),
-            fill="tozeroy", fillcolor="rgba(192,160,98,0.10)",
-        ))
-        fig_b.add_trace(go.Scatter(
-            x=x * 100, y=y_post, mode="lines",
-            name=t(lang, "posterior_label"),
-            line=dict(color=_C["navy"], width=2.5),
-            fill="tozeroy", fillcolor="rgba(26,50,113,0.10)",
-        ))
-        fig_b.update_layout(
-            xaxis_title=t(lang, "probability_pct"),
-            yaxis_title=t(lang, "density"),
-            height=400,
-            **CHART_LAYOUT,
-        )
+        fig_b.add_trace(go.Scatter(x=x*100, y=y_prior, mode="lines", name=t(lang, "prior_label"),
+                                   line=dict(color=_C["gold"], width=2),
+                                   fill="tozeroy", fillcolor="rgba(192,160,98,0.10)"))
+        fig_b.add_trace(go.Scatter(x=x*100, y=y_post, mode="lines", name=t(lang, "posterior_label"),
+                                   line=dict(color=_C["navy"], width=2.5),
+                                   fill="tozeroy", fillcolor="rgba(26,50,113,0.10)"))
+        fig_b.update_layout(xaxis_title=t(lang, "probability_pct"), yaxis_title=t(lang, "density"),
+                            height=400, **CHART_LAYOUT)
         st.plotly_chart(fig_b, width="stretch")
-
         risk = math_eng.bayesian_contextual_risk(0.05, 0.80, 0.20)
         st.info(t(lang, "contextual_risk", risk=risk))
 
-    # ────────────────────────────────────────────────────────────────────
-    # TAB 5 — PASSPORT
-    # ────────────────────────────────────────────────────────────────────
+    # ── TAB 5: PASSPORT ───────────────────────────────────────────────────────
     with tab5:
         st.subheader(t(lang, "passport_title"))
-
         passport = roi_eng.passport_text(inp, res)
         st.code(passport, language="")
 
+        # Meeting notes (4)
+        st.session_state.setdefault("meeting_notes", "")
+        meeting_notes = st.text_area(
+            t(lang, "notes_label"),
+            key="meeting_notes",
+            help=t(lang, "notes_help"),
+            height=100,
+            placeholder={"en": "Key points from the meeting...",
+                         "ru": "Ключевые моменты встречи...",
+                         "sr": "Ključne tačke sastanka..."}.get(lang, ""),
+        )
+
         if is_demo:
             _lock_msg = {
-                "en": ("🔐 Download TXT — available after login",
-                       "🔐 Download PDF — available after login",
+                "en": ("Download TXT — available after login",
+                       "Download PDF — available after login",
                        "Sign in to export your ROI Passport"),
-                "ru": ("🔐 Скачать TXT — доступно после входа",
-                       "🔐 Скачать PDF — доступно после входа",
+                "ru": ("Скачать TXT — доступно после входа",
+                       "Скачать PDF — доступно после входа",
                        "Войдите, чтобы экспортировать ROI-паспорт"),
-                "sr": ("🔐 Preuzmi TXT — dostupno nakon prijave",
-                       "🔐 Preuzmi PDF — dostupno nakon prijave",
+                "sr": ("Preuzmi TXT — dostupno nakon prijave",
+                       "Preuzmi PDF — dostupno nakon prijave",
                        "Prijavite se da biste izvezli ROI pasoš"),
             }
             dl1, dl2 = st.columns(2)
             with dl1:
-                st.button(_lock_msg[lang][0], key="dl_txt_lock", disabled=True,
-                          use_container_width=True)
+                st.button(_lock_msg[lang][0], key="dl_txt_lock", disabled=True, use_container_width=True)
             with dl2:
-                st.button(_lock_msg[lang][1], key="dl_pdf_lock", disabled=True,
-                          use_container_width=True)
+                st.button(_lock_msg[lang][1], key="dl_pdf_lock", disabled=True, use_container_width=True)
             st.caption(_lock_msg[lang][2])
         else:
             dl1, dl2 = st.columns(2)
-
             with dl1:
                 st.download_button(
                     label=t(lang, "download_txt"),
                     data=passport.encode("utf-8"),
                     file_name="roi_passport_{}.txt".format(company_name.replace(" ", "_")),
-                    mime="text/plain",
-                    key="dl_txt",
+                    mime="text/plain", key="dl_txt",
                 )
-
             with dl2:
                 try:
                     pdf_bytes = build_roi_passport_pdf(
                         company_name=company_name,
-                        auditor_name="Andrew | AI Product Advisor",
+                        auditor_name=auditor_name,
+                        contact_url=contact_url,
+                        meeting_notes=meeting_notes,
                         time_saved=res.time_saved_annual,
                         error_reduction=res.error_reduction_annual,
                         revenue_impact=res.revenue_impact_annual,
@@ -879,20 +851,16 @@ def run_dashboard():
                     )
                 except Exception as _pdf_err:
                     st.error("PDF error: {}".format(_pdf_err))
-                    import traceback
-                    st.code(traceback.format_exc())
+                    import traceback; st.code(traceback.format_exc())
                     pdf_bytes = b""
                 st.download_button(
                     label=t(lang, "download_pdf"),
                     data=pdf_bytes,
                     file_name="roi_passport_{}.pdf".format(company_name.replace(" ", "_")),
-                    mime="application/pdf",
-                    key="dl_pdf",
+                    mime="application/pdf", key="dl_pdf",
                 )
 
         linkedin_text = t(lang, "linkedin_text",
-                          company=company_name,
-                          roi=res.net_roi,
-                          roi_pct=res.roi_pct,
-                          payback=res.payback_months)
+                          company=company_name, roi=res.net_roi,
+                          roi_pct=res.roi_pct, payback=res.payback_months)
         st.text_area(t(lang, "linkedin_label"), value=linkedin_text, height=110, key="linkedin_ta")
