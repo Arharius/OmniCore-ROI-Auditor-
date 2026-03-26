@@ -12,8 +12,10 @@ import streamlit as st
 import plotly.graph_objects as go
 from scipy import stats
 
+import dataclasses
+
 from core.math_engine import MathEngine
-from core.roi_engine import ROIEngine, ROIInput
+from core.roi_engine import ROIEngine, ROIInput, ROIResult
 from etl.extractor import MatrixExtractor
 from exports.pdf_generator import build_roi_passport_pdf
 from ui.i18n import TRANSLATIONS, LANG_NAMES, t
@@ -96,9 +98,9 @@ DEMO_PRESETS = {
         },
         "company_name": "ТрансЛогик МСК",
         "manual_hours": 520, "automation_rate": 75, "hour_rate": 15,
-        "error_before": 14.0, "error_after": 1.8, "cost_per_error": 220, "volume": 1400,
-        "cycle_before": 18, "cycle_after": 5, "deals_month": 85, "deal_value": 12000,
-        "p_before": 64, "p_after": 89, "impl_cost": 28000,
+        "error_before": 14.0, "error_after": 1.8, "cost_per_error": 85, "volume": 250,
+        "cycle_before": 14, "cycle_after": 6, "deals_month": 7, "deal_value": 2800,
+        "p_before": 68, "p_after": 82, "impl_cost": 28000,
     },
     "agency": {
         "labels": {"en": "Agency", "ru": "Агентство", "sr": "Agencija"},
@@ -108,10 +110,10 @@ DEMO_PRESETS = {
             "sr": "Performance agencija Moskva — 18 klijenata, 320 h/mes. izveštaji, prosečan nalog 8 500 €",
         },
         "company_name": "MOKO Digital",
-        "manual_hours": 320, "automation_rate": 85, "hour_rate": 25,
-        "error_before": 8.5, "error_after": 0.9, "cost_per_error": 150, "volume": 280,
-        "cycle_before": 21, "cycle_after": 7, "deals_month": 18, "deal_value": 8500,
-        "p_before": 71, "p_after": 92, "impl_cost": 15000,
+        "manual_hours": 320, "automation_rate": 75, "hour_rate": 22,
+        "error_before": 8.5, "error_after": 0.9, "cost_per_error": 100, "volume": 80,
+        "cycle_before": 18, "cycle_after": 6, "deals_month": 4, "deal_value": 4500,
+        "p_before": 71, "p_after": 88, "impl_cost": 15000,
     },
     "retail": {
         "labels": {"en": "Retail", "ru": "Ритейл", "sr": "Maloprodaja"},
@@ -121,10 +123,10 @@ DEMO_PRESETS = {
             "sr": "Maloprodajni lanac Beograd — 12 prodavnica, 380 h/mes., 2 200 faktura",
         },
         "company_name": "МегаМаркет d.o.o.",
-        "manual_hours": 380, "automation_rate": 68, "hour_rate": 10,
-        "error_before": 9.2, "error_after": 1.5, "cost_per_error": 95, "volume": 2000,
-        "cycle_before": 8, "cycle_after": 3, "deals_month": 45, "deal_value": 1800,
-        "p_before": 72, "p_after": 93, "impl_cost": 19000,
+        "manual_hours": 380, "automation_rate": 65, "hour_rate": 10,
+        "error_before": 9.2, "error_after": 1.5, "cost_per_error": 55, "volume": 400,
+        "cycle_before": 8, "cycle_after": 3, "deals_month": 8, "deal_value": 1200,
+        "p_before": 72, "p_after": 87, "impl_cost": 14000,
     },
 }
 _DEMO_KEYS = ["manual_hours", "automation_rate", "hour_rate",
@@ -154,6 +156,33 @@ _C = dict(
     red="#FF3B30",  purple="#AF52DE", amber="#FF9F0A",
     blue="#0071E3", teal="#5AC8FA",
 )
+
+
+def _apply_confidence(res: ROIResult, factor: float) -> ROIResult:
+    if factor == 1.0:
+        return res
+    ts    = res.time_saved_annual      * factor
+    er    = res.error_reduction_annual * factor
+    ri    = res.revenue_impact_annual  * factor
+    mg    = res.markov_gain_annual     * factor
+    total = ts + er + ri + mg
+    impl  = res.total_benefit - res.net_roi
+    net   = total - impl
+    roi_pct = (net / impl * 100) if impl else 0.0
+    payback = impl / (total / 12) if total else 0.0
+    return dataclasses.replace(
+        res,
+        time_saved_annual=round(ts, 2),
+        error_reduction_annual=round(er, 2),
+        revenue_impact_annual=round(ri, 2),
+        markov_gain_annual=round(mg, 2),
+        total_benefit=round(total, 2),
+        net_roi=round(net, 2),
+        roi_pct=round(roi_pct, 2),
+        payback_months=round(payback, 1),
+    )
+
+
 CHART_LAYOUT = dict(
     plot_bgcolor="rgba(255,255,255,0)",
     paper_bgcolor="rgba(255,255,255,0)",
@@ -322,6 +351,7 @@ def run_dashboard():
     st.session_state.setdefault("presentation_mode", False)
     st.session_state.setdefault("auditor_name", "Andrew | AI Product Advisor")
     st.session_state.setdefault("contact_url", "https://t.me/weerowoolf")
+    st.session_state.setdefault("scenario_confidence", 0.75)
 
     with st.sidebar:
         lang = st.radio(
@@ -365,6 +395,43 @@ def run_dashboard():
 
         st.markdown("---")
 
+        # Scenario confidence (2)
+        _sc_title = {"en": "Scenario", "ru": "Сценарий", "sr": "Scenario"}
+        _sc_opts  = {
+            "en": ("Pessimist.", "Realistic", "Optimist."),
+            "ru": ("Пессим.",   "Реалист.",  "Оптимист."),
+            "sr": ("Pesimist.", "Realista",  "Optimist."),
+        }
+        _cur_conf = st.session_state["scenario_confidence"]
+        st.markdown(
+            f'<div style="font-size:11px;font-weight:600;color:#AEAEB2;'
+            f'letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px;">'
+            f'{_sc_title[lang]}</div>',
+            unsafe_allow_html=True,
+        )
+        _sca, _scb, _scc = st.columns(3)
+        _sc_style = lambda active: (
+            "background:#0071E3!important;color:#fff!important;"
+            if active else ""
+        )
+        if _sca.button(
+            _sc_opts[lang][0], key="btn_sc_pess", use_container_width=True,
+            type="primary" if _cur_conf == 0.50 else "secondary",
+        ):
+            st.session_state["scenario_confidence"] = 0.50; st.rerun()
+        if _scb.button(
+            _sc_opts[lang][1], key="btn_sc_real", use_container_width=True,
+            type="primary" if _cur_conf == 0.75 else "secondary",
+        ):
+            st.session_state["scenario_confidence"] = 0.75; st.rerun()
+        if _scc.button(
+            _sc_opts[lang][2], key="btn_sc_opti", use_container_width=True,
+            type="primary" if _cur_conf == 1.00 else "secondary",
+        ):
+            st.session_state["scenario_confidence"] = 1.00; st.rerun()
+
+        st.markdown("---")
+
         # Currency selector (3)
         currency = st.radio(
             t(lang, "currency_label"),
@@ -380,10 +447,25 @@ def run_dashboard():
         company_name = st.text_input(t(lang, "company_label"), key="company_name")
 
         if is_demo:
-            _lock_csv = {"en": "Upload CSV available after login",
-                         "ru": "Загрузка CSV доступна после входа",
-                         "sr": "Učitavanje CSV dostupno nakon prijave"}
+            _lock_csv = {
+                "en": "Sign in to upload your own CSV data",
+                "ru": "Войдите, чтобы загрузить свои CSV-данные",
+                "sr": "Prijavite se da učitate sopstvene CSV podatke",
+            }
             st.info(_lock_csv[lang])
+            _sample_label = {"en": "Download sample CSV", "ru": "Скачать пример CSV", "sr": "Preuzmi primer CSV"}
+            try:
+                with open("data/mock_client_data.csv", "rb") as _sf:
+                    st.download_button(
+                        label=_sample_label[lang],
+                        data=_sf.read(),
+                        file_name="sample_audit_data.csv",
+                        mime="text/csv",
+                        key="dl_sample_csv",
+                        use_container_width=True,
+                    )
+            except Exception:
+                pass
             csv_file = None
         else:
             csv_file = st.file_uploader(
@@ -481,6 +563,7 @@ def run_dashboard():
 
     bayes_res = math_eng.bayesian_update(inp.positive_signals, inp.total_signals)
     res = roi_eng.calculate(inp, bayes_result=bayes_res)
+    res = _apply_confidence(res, st.session_state.get("scenario_confidence", 0.75))
 
     default_edges = [
         ("Lead", "In Review", 3.0),
@@ -561,6 +644,22 @@ def run_dashboard():
             unsafe_allow_html=True,
         )
 
+    # ── Scenario badge (2) ──────────────────────────────────────────────────────
+    _conf_val = st.session_state.get("scenario_confidence", 0.75)
+    _conf_badge = {
+        0.50: {"en": "Pessimistic · 50%", "ru": "Пессимистичный · 50%", "sr": "Pesimistički · 50%", "color": "#FF9F0A"},
+        0.75: {"en": "Realistic · 75%",   "ru": "Реалистичный · 75%",   "sr": "Realistički · 75%",  "color": "#0071E3"},
+        1.00: {"en": "Optimistic · 100%", "ru": "Оптимистичный · 100%", "sr": "Optimistički · 100%", "color": "#34C759"},
+    }.get(_conf_val, {"en": "Realistic · 75%", "ru": "Реалистичный · 75%", "sr": "Realistički · 75%", "color": "#0071E3"})
+    st.markdown(
+        f'<div style="display:inline-block;background:{_conf_badge["color"]}18;'
+        f'border:1px solid {_conf_badge["color"]}44;border-radius:980px;'
+        f'padding:3px 14px;margin-bottom:12px;">'
+        f'<span style="font-size:12px;font-weight:600;color:{_conf_badge["color"]};'
+        f'letter-spacing:0.02em;">{_conf_badge[lang]}</span></div>',
+        unsafe_allow_html=True,
+    )
+
     # ── KPI cards with benchmark delta (6) ─────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
     _roi_delta = res.net_roi - _bench_roi_eur
@@ -622,7 +721,7 @@ def run_dashboard():
             fig_pie = go.Figure(go.Pie(
                 labels=pie_labels, values=pie_vals, hole=0.5,
                 marker=dict(
-                    colors=[_C["green"], _C["navy"], _C["purple"], _C["amber"]],
+                    colors=["#34C759", "#5AC8FA", "#0071E3", "#AF52DE"],
                     line=dict(color="rgba(240,236,228,1)", width=2),
                 ),
                 textinfo="label+percent", textfont=dict(color="#4a5168", size=11),
