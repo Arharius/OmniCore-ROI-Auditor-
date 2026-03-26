@@ -495,40 +495,63 @@ def run_dashboard():
             st.session_state.setdefault(_k, _v)
 
         st.markdown("---")
-        st.markdown(t(lang, "labor_section"))
-        manual_hours    = st.slider(t(lang, "manual_hours"),   50,   600,       key="manual_hours")
-        automation_rate = st.slider(t(lang, "automation_pct"), 50,    95,       key="automation_rate")
-        hour_rate       = st.slider(t(lang, "hour_rate"),       8,    30,       key="hour_rate")
 
-        st.markdown(t(lang, "errors_section"))
-        error_before   = st.slider(t(lang, "error_before"),  1.0, 20.0, step=0.1, key="error_before")
-        error_after    = st.slider(t(lang, "error_after"),   0.1,  5.0, step=0.1, key="error_after")
-        cost_per_error = st.slider(t(lang, "cost_per_error"), 20,  500,          key="cost_per_error")
-        volume         = st.slider(t(lang, "volume"),        100, 2000,          key="volume")
+        with st.expander("💼 " + t(lang, "labor_section").strip("*"), expanded=True):
+            manual_hours    = st.slider(t(lang, "manual_hours"),   50, 600,      key="manual_hours",
+                                        help=t(lang, "help_manual_hours"))
+            automation_rate = st.slider(t(lang, "automation_pct"), 50,  95,      key="automation_rate",
+                                        help=t(lang, "help_automation_pct"))
+            hour_rate       = st.slider(t(lang, "hour_rate"),       8,  30,      key="hour_rate",
+                                        help=t(lang, "help_hour_rate"))
 
-        st.markdown(t(lang, "cycle_section"))
-        cycle_before = st.slider(t(lang, "cycle_before"),  5,  60,              key="cycle_before")
-        cycle_after  = st.slider(t(lang, "cycle_after"),   1,  30,              key="cycle_after")
-        deals        = st.slider(t(lang, "deals_month"),   5, 200,              key="deals_month")
-        deal_value   = st.slider(t(lang, "deal_value"),  100, 15000, step=100,  key="deal_value")
+        with st.expander("⚠️ " + t(lang, "errors_section").strip("*"), expanded=False):
+            error_before   = st.slider(t(lang, "error_before"),  1.0, 20.0, step=0.1, key="error_before",
+                                       help=t(lang, "help_error_before"))
+            error_after    = st.slider(t(lang, "error_after"),   0.1,  5.0, step=0.1, key="error_after",
+                                       help=t(lang, "help_error_after"))
+            if error_after >= error_before:
+                st.warning(t(lang, "val_error_rate"))
+            cost_per_error = st.slider(t(lang, "cost_per_error"), 20, 500,       key="cost_per_error",
+                                       help=t(lang, "help_cost_per_error"))
+            volume         = st.slider(t(lang, "volume"),        100, 2000,      key="volume",
+                                       help=t(lang, "help_volume"))
 
-        st.markdown(t(lang, "proba_section"))
-        p_before = st.slider(t(lang, "p_before"), 50,  95, key="p_before")
-        p_after  = st.slider(t(lang, "p_after"),  70,  99, key="p_after")
+        with st.expander("🔄 " + t(lang, "cycle_section").strip("*"), expanded=False):
+            cycle_before = st.slider(t(lang, "cycle_before"), 5,  60,            key="cycle_before",
+                                     help=t(lang, "help_cycle_before"))
+            cycle_after  = st.slider(t(lang, "cycle_after"),  1,  30,            key="cycle_after",
+                                     help=t(lang, "help_cycle_after"))
+            if cycle_after >= cycle_before:
+                st.warning(t(lang, "val_cycle"))
+            deals      = st.slider(t(lang, "deals_month"),    5, 200,            key="deals_month",
+                                   help=t(lang, "help_deals_month"))
+            deal_value = st.number_input(t(lang, "deal_value"), min_value=100, max_value=50000,
+                                         step=100, key="deal_value",
+                                         help=t(lang, "help_deal_value"))
+
+        with st.expander("📐 " + t(lang, "proba_section").strip("*"), expanded=False):
+            p_before = st.slider(t(lang, "p_before"), 50, 95, key="p_before",
+                                 help=t(lang, "help_p_before"))
+            p_after  = st.slider(t(lang, "p_after"),  70, 99, key="p_after",
+                                 help=t(lang, "help_p_after"))
+            if p_after < p_before:
+                st.warning(t(lang, "val_p_complete"))
 
         _input_note = {
-            "en": "ℹ️ Input values are in EUR. Display currency converts all outputs.",
-            "ru": "ℹ️ Входные данные — в EUR. Валюта меняет только отображение результатов.",
-            "sr": "ℹ️ Ulazne vrednosti su u EUR. Valuta menja prikaz rezultata.",
+            "en": "ℹ️ Inputs in EUR. Currency selector converts outputs only.",
+            "ru": "ℹ️ Входные данные в EUR. Валюта меняет только вывод.",
+            "sr": "ℹ️ Ulazne vrednosti u EUR. Valuta menja samo prikaz.",
         }
         st.caption(_input_note.get(lang, _input_note["en"]))
 
-        st.markdown(t(lang, "invest_section"))
-        impl_cost    = st.slider(t(lang, "impl_cost"), 5000, 100000, step=1000, key="impl_cost")
-        pipeline_util = st.slider(
-            t(lang, "pipeline_util"), 10, 60, key="pipeline_util",
-            help=t(lang, "pipeline_util_help"),
-        )
+        with st.expander("💰 " + t(lang, "invest_section").strip("*"), expanded=False):
+            impl_cost = st.number_input(t(lang, "impl_cost"), min_value=1000, max_value=500000,
+                                        step=1000, key="impl_cost",
+                                        help=t(lang, "help_impl_cost"))
+            pipeline_util = st.slider(
+                t(lang, "pipeline_util"), 10, 60, key="pipeline_util",
+                help=t(lang, "pipeline_util_help"),
+            )
 
         st.markdown("---")
 
@@ -797,6 +820,94 @@ def run_dashboard():
                     res.total_benefit, -impl_cost, res.net_roi]],
             })
             st.dataframe(df_bd, height=300)
+
+        # ── Gauge + Radar row ────────────────────────────────────────────────
+        _g1, _g2 = st.columns(2)
+
+        # Gauge: ROI % vs industry benchmark
+        with _g1:
+            _bench_roi = bench["roi_pct"]
+            _gauge_max = max(int(res.roi_pct * 1.5), 600)
+            _gauge_title = {
+                "en": f"ROI % vs industry avg ({_bench_roi:.0f}%)",
+                "ru": f"ROI % vs ср. по рынку ({_bench_roi:.0f}%)",
+                "sr": f"ROI % vs prosek grane ({_bench_roi:.0f}%)",
+            }.get(lang, f"ROI % vs benchmark ({_bench_roi:.0f}%)")
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number+delta",
+                value=res.roi_pct,
+                delta={"reference": _bench_roi, "valueformat": ".0f",
+                       "increasing": {"color": "#34C759"}, "decreasing": {"color": "#FF3B30"}},
+                number={"suffix": "%", "font": {"size": 32, "color": "#1D1D1F", "family": "Inter"}},
+                gauge={
+                    "axis": {"range": [0, _gauge_max], "tickcolor": "#AEAEB2",
+                             "tickfont": {"size": 10, "color": "#AEAEB2"}},
+                    "bar": {"color": "#0071E3", "thickness": 0.28},
+                    "bgcolor": "rgba(0,0,0,0)",
+                    "borderwidth": 0,
+                    "steps": [
+                        {"range": [0, _bench_roi * 0.5], "color": "rgba(255,59,48,0.08)"},
+                        {"range": [_bench_roi * 0.5, _bench_roi], "color": "rgba(255,159,10,0.08)"},
+                        {"range": [_bench_roi, _gauge_max], "color": "rgba(52,199,89,0.08)"},
+                    ],
+                    "threshold": {
+                        "line": {"color": "#FF9F0A", "width": 2},
+                        "thickness": 0.75,
+                        "value": _bench_roi,
+                    },
+                },
+                title={"text": _gauge_title, "font": {"size": 12, "color": "#6E6E73"}},
+            ))
+            fig_gauge.update_layout(
+                height=280, margin=dict(l=20, r=20, t=40, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter, sans-serif"),
+            )
+            st.plotly_chart(fig_gauge, width="stretch")
+
+        # Radar: 4-component ROI structure
+        with _g2:
+            _radar_labels = [
+                t(lang, "time_saved"), t(lang, "error_saved"),
+                t(lang, "revenue_speed"), t(lang, "revenue_conv"),
+            ]
+            _radar_vals = [
+                res.time_saved_annual, res.error_reduction_annual,
+                res.revenue_impact_annual, res.markov_gain_annual,
+            ]
+            _max_r = max(_radar_vals) if any(_radar_vals) else 1
+            _radar_pct = [v / _max_r * 100 for v in _radar_vals]
+            _radar_labels_closed = _radar_labels + [_radar_labels[0]]
+            _radar_pct_closed    = _radar_pct    + [_radar_pct[0]]
+            fig_radar = go.Figure()
+            fig_radar.add_trace(go.Scatterpolar(
+                r=_radar_pct_closed, theta=_radar_labels_closed,
+                fill="toself", fillcolor="rgba(0,113,227,0.10)",
+                line=dict(color="#0071E3", width=2.5),
+                name="ROI",
+            ))
+            fig_radar.update_layout(
+                polar=dict(
+                    bgcolor="rgba(0,0,0,0)",
+                    radialaxis=dict(visible=True, range=[0, 100],
+                                   tickfont=dict(size=9, color="#AEAEB2"),
+                                   gridcolor="rgba(0,0,0,0.06)", linecolor="rgba(0,0,0,0.06)"),
+                    angularaxis=dict(tickfont=dict(size=11, color="#1D1D1F"),
+                                     gridcolor="rgba(0,0,0,0.06)"),
+                ),
+                showlegend=False, height=280,
+                margin=dict(l=40, r=40, t=40, b=10),
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter, sans-serif"),
+                title=dict(
+                    text={
+                        "en": "Benefit structure (relative)",
+                        "ru": "Структура выгод (относительно)",
+                        "sr": "Struktura koristi (relativno)",
+                    }.get(lang, "Benefit structure"),
+                    font=dict(size=12, color="#6E6E73"),
+                ),
+            )
+            st.plotly_chart(fig_radar, width="stretch")
 
         # Scenario comparison (5)
         with st.expander(t(lang, "scenario_section")):
@@ -1246,3 +1357,23 @@ def run_dashboard():
             **_proj_layout,
         )
         st.plotly_chart(_fig_proj, width="stretch")
+
+    # ── FAQ / METHODOLOGY ──────────────────────────────────────────────────────
+    st.markdown("---")
+    with st.expander("📚 " + t(lang, "faq_title"), expanded=False):
+        _faq_style = (
+            "background:#F5F5F7;border-radius:12px;padding:14px 18px;"
+            "margin:6px 0;border-left:3px solid #0071E3;"
+        )
+        _q_style = "font-size:14px;font-weight:600;color:#1D1D1F;margin:0 0 4px;"
+        _a_style = "font-size:13px;color:#6E6E73;margin:0;"
+        for _qi in range(1, 6):
+            _q = t(lang, f"faq_q{_qi}")
+            _a = t(lang, f"faq_a{_qi}")
+            st.markdown(
+                f'<div style="{_faq_style}">'
+                f'<p style="{_q_style}">{_q}</p>'
+                f'<p style="{_a_style}">{_a}</p>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
