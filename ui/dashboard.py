@@ -858,7 +858,7 @@ def run_dashboard():
 
         # Gauge: ROI % vs industry benchmark
         with _g1:
-            _bench_roi = bench["roi_pct"]
+            _bench_roi = _bench["roi_pct"]
             _gauge_max = max(int(res.roi_pct * 1.5), 600)
             _gauge_title = {
                 "en": f"ROI % vs industry avg ({_bench_roi:.0f}%)",
