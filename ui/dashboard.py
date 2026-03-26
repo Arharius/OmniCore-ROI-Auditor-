@@ -32,6 +32,18 @@ _CURRENCIES = {
 def _fmt(val_eur: float, currency: str) -> str:
     cur = _CURRENCIES.get(currency, _CURRENCIES["EUR"])
     converted = val_eur * cur["rate"]
+    if currency == "RSD":
+        if abs(converted) >= 1_000_000:
+            s = "{:,.0f}".format(converted / 1_000_000).replace(",", ".")
+            return "{} {}M".format(s, cur["sym"])
+        s = "{:,.0f}".format(converted).replace(",", ".")
+        return "{} {}".format(s, cur["sym"])
+    if currency == "RUB":
+        if abs(converted) >= 1_000_000:
+            s = "{:,.0f}".format(converted / 1_000_000).replace(",", "\u202f")
+            return "{} {}M".format(s, cur["sym"])
+        s = "{:,.0f}".format(converted).replace(",", "\u202f")
+        return "{} {}".format(s, cur["sym"])
     if abs(converted) >= 1_000_000:
         return "{:,.0f} {}".format(converted / 1_000_000, cur["sym"] + "M")
     return "{:,.0f} {}".format(converted, cur["sym"])

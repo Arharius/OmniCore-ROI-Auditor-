@@ -169,6 +169,15 @@ class ROIEngine:
         r = currency_rate
         s = currency_sym
         today = date.today().strftime("%d.%m.%Y")
+
+        def _n(val: float) -> str:
+            """Format number with locale-appropriate thousands separator."""
+            if lang == "sr":
+                return "{:,.0f}".format(val).replace(",", ".")
+            if lang == "ru":
+                return "{:,.0f}".format(val).replace(",", "\u202f")
+            return "{:,.0f}".format(val)
+
         SEP = "=" * 64
         sep = "-" * 64
         lines = [
@@ -180,16 +189,16 @@ class ROIEngine:
             sep,
             "  {}".format(l["metrics"]),
             sep,
-            "  {}: {:>12,.2f} {}".format(l["time_saved"],  res.time_saved_annual * r,      s),
-            "  {}: {:>12,.2f} {}".format(l["error_saved"], res.error_reduction_annual * r,  s),
-            "  {}: {:>12,.2f} {}".format(l["rev_speed"],   res.revenue_impact_annual * r,   s),
-            "  {}: {:>12,.2f} {}".format(l["rev_conv"],    res.markov_gain_annual * r,       s),
+            "  {}: {:>16} {}".format(l["time_saved"],  _n(res.time_saved_annual * r),      s),
+            "  {}: {:>16} {}".format(l["error_saved"], _n(res.error_reduction_annual * r),  s),
+            "  {}: {:>16} {}".format(l["rev_speed"],   _n(res.revenue_impact_annual * r),   s),
+            "  {}: {:>16} {}".format(l["rev_conv"],    _n(res.markov_gain_annual * r),       s),
             "  {}: {:>16.1f}%".format(l["b_prior"],  res.bayesian_prior_pct),
             "  {}: {:>16.1f}%".format(l["b_post"],   res.bayesian_posterior_pct),
             "  {}: {:>17}".format(l["b_ci"],         res.bayesian_ci),
             sep,
-            "  {}: {:>16,.2f} {}".format(l["total_b"], res.total_benefit * r, s),
-            "  {}: {:>16,.2f} {}".format(l["net_roi"], res.net_roi * r,        s),
+            "  {}: {:>16} {}".format(l["total_b"], _n(res.total_benefit * r), s),
+            "  {}: {:>16} {}".format(l["net_roi"], _n(res.net_roi * r),        s),
             "  {}: {:>16.2f}%".format(l["roi_pct"],   res.roi_pct),
             "  {}: {:>12.1f} {}".format(l["payback"],  res.payback_months, l["months"]),
             SEP,
