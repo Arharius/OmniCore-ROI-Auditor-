@@ -99,8 +99,12 @@ html, body, [class*="css"] {
 
 .stApp { background: #F5F5F7 !important; }
 [data-testid="stSidebar"] { display: none !important; }
-footer, header, #MainMenu, [data-testid="stToolbar"],
-[data-testid="stDecoration"] { display: none !important; visibility: hidden !important; }
+footer, header, #MainMenu,
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stHeader"],
+[data-testid="baseButton-headerNoPadding"],
+.stAppDeployButton { display: none !important; visibility: hidden !important; height: 0 !important; }
 
 .block-container {
     padding-top: 0 !important;
