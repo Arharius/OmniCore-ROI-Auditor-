@@ -22,6 +22,37 @@ from exports.pdf_generator import build_roi_passport_pdf
 from ui.i18n import TRANSLATIONS, LANG_NAMES, t
 
 
+# ── Cached Monte Carlo (Sprint 3) ──────────────────────────────────────────────
+@st.cache_data(show_spinner=False, ttl=300)
+def _cached_mc(
+    manual_hours, automation_rate, hour_rate,
+    error_before, error_after, cost_per_error, volume,
+    cycle_before, cycle_after, deals, deal_value,
+    p_before, p_after, impl_cost, pipeline_util,
+    n: int = 5000,
+):
+    _inp = ROIInput(
+        company_name="",
+        manual_hours_per_month=float(manual_hours),
+        automation_rate=automation_rate / 100.0,
+        hour_rate_eur=float(hour_rate),
+        error_rate_before_pct=float(error_before),
+        error_rate_after_pct=float(error_after),
+        cost_per_error_eur=float(cost_per_error),
+        monthly_volume=int(volume),
+        deal_cycle_before_days=float(cycle_before),
+        deal_cycle_after_days=float(cycle_after),
+        deals_per_month=int(deals),
+        avg_deal_value_eur=float(deal_value),
+        p_complete_before=p_before / 100.0,
+        p_complete_after=p_after / 100.0,
+        implementation_cost_eur=float(impl_cost),
+        positive_signals=4, total_signals=5,
+        pipeline_utilization_pct=float(pipeline_util),
+    )
+    return run_monte_carlo(_inp, n=n)
+
+
 # ── Currency ───────────────────────────────────────────────────────────────────
 _CURRENCIES = {
     "EUR": {"sym": "€",    "rate": 1.0,   "label": "EUR"},
@@ -755,9 +786,10 @@ def run_dashboard():
     st.markdown("---")
 
     # ── TABS ───────────────────────────────────────────────────────────────────
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         t(lang, "tab_roi"), t(lang, "tab_graph"), t(lang, "tab_markov"),
         t(lang, "tab_bayes"), t(lang, "tab_passport"), t(lang, "tab_precision"),
+        t(lang, "tab_about"),
     ])
 
     # ── TAB 1: ROI BREAKDOWN ───────────────────────────────────────────────────
@@ -909,6 +941,61 @@ def run_dashboard():
             )
             st.plotly_chart(fig_radar, width="stretch")
 
+        # ── Bullet chart: Payback Progress ───────────────────────────────────
+        _pay_val   = res.payback_months
+        _pay_max   = 36
+        _pay_tgt   = 12
+        _pay_warn  = 18
+        _pay_color = "#34C759" if _pay_val <= _pay_tgt else ("#FF9F0A" if _pay_val <= _pay_warn else "#FF3B30")
+        _pay_rate  = _CURRENCIES[currency]["rate"]
+        _pay_label = _CURRENCIES[currency]["label"]
+        _bullet_x_label = {
+            "en": "Months to payback",
+            "ru": "Месяцев до окупаемости",
+            "sr": "Meseci do povrata",
+        }.get(lang, "Months to payback")
+        fig_bullet = go.Figure()
+        fig_bullet.add_trace(go.Bar(
+            x=[_pay_max], y=[t(lang, "bullet_title")], orientation="h",
+            marker_color="rgba(200,200,200,0.15)", width=0.22, showlegend=False, hoverinfo="none",
+        ))
+        fig_bullet.add_trace(go.Bar(
+            x=[_pay_warn], y=[t(lang, "bullet_title")], orientation="h",
+            marker_color="rgba(255,159,10,0.13)", width=0.22, showlegend=False, hoverinfo="none",
+        ))
+        fig_bullet.add_trace(go.Bar(
+            x=[_pay_tgt], y=[t(lang, "bullet_title")], orientation="h",
+            marker_color="rgba(52,199,89,0.13)", width=0.22, showlegend=False, hoverinfo="none",
+        ))
+        fig_bullet.add_trace(go.Bar(
+            x=[_pay_val], y=[t(lang, "bullet_title")], orientation="h",
+            marker_color=_pay_color, width=0.12, showlegend=True,
+            name="{:.1f} {}".format(_pay_val, t(lang, "months")),
+        ))
+        fig_bullet.add_vline(
+            x=_pay_tgt, line_dash="dash", line_color="#34C759", line_width=2,
+            annotation_text=t(lang, "bullet_target"),
+            annotation_position="top right",
+            annotation_font=dict(size=10, color="#34C759"),
+        )
+        fig_bullet.update_layout(
+            barmode="overlay",
+            height=130,
+            margin=dict(l=10, r=30, t=30, b=10),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, sans-serif"),
+            showlegend=True,
+            legend=dict(x=0.75, y=1.2, font=dict(size=11)),
+            xaxis=dict(
+                range=[0, _pay_max], title=_bullet_x_label,
+                gridcolor="rgba(0,0,0,0.05)", tickfont=dict(color="#AEAEB2", size=10),
+                zeroline=False,
+            ),
+            yaxis=dict(visible=False),
+        )
+        st.plotly_chart(fig_bullet, width="stretch")
+
         # Scenario comparison (5)
         with st.expander(t(lang, "scenario_section")):
             sc1, sc2, sc3 = st.columns(3)
@@ -1003,6 +1090,48 @@ def run_dashboard():
             st.markdown(t(lang, "matrix_n"))
             df_N = pd.DataFrame(N_mat, index=m_states, columns=m_states)
             st.dataframe(df_N.style.format("{:.4f}"))
+        # ── Funnel chart: Pipeline BEFORE vs AFTER ────────────────────────────
+        st.markdown("---")
+        st.subheader(t(lang, "funnel_title"))
+        _fn1, _fn2 = st.columns(2)
+        _fn_stages = m_states + (
+            ["Won"] if lang == "en" else (["Выиграна"] if lang == "ru" else ["Zatvoren"])
+        )
+        _fn_n = len(_fn_stages)
+        _fn_before = [round(deals * (p_before / 100.0) ** (i / max(_fn_n - 1, 1)), 1)
+                      for i in range(_fn_n)]
+        _fn_after  = [round(deals * (p_after  / 100.0) ** (i / max(_fn_n - 1, 1)), 1)
+                      for i in range(_fn_n)]
+        with _fn1:
+            fig_fn_b = go.Figure(go.Funnel(
+                y=_fn_stages, x=_fn_before, textinfo="value+percent previous",
+                marker=dict(color=[_C["navy"], "#5AC8FA", _C["blue"], "#34C759"][:_fn_n]),
+                connector=dict(line=dict(color="rgba(26,50,113,0.10)", width=1)),
+                name=t(lang, "funnel_before"),
+            ))
+            fig_fn_b.update_layout(
+                title=dict(text=t(lang, "funnel_before"), font=dict(size=13, color="#6E6E73")),
+                height=300, margin=dict(l=10, r=10, t=40, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter, sans-serif"),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_fn_b, width="stretch")
+        with _fn2:
+            fig_fn_a = go.Figure(go.Funnel(
+                y=_fn_stages, x=_fn_after, textinfo="value+percent previous",
+                marker=dict(color=["#34C759", "#5AC8FA", _C["blue"], _C["navy"]][:_fn_n]),
+                connector=dict(line=dict(color="rgba(52,199,89,0.10)", width=1)),
+                name=t(lang, "funnel_after"),
+            ))
+            fig_fn_a.update_layout(
+                title=dict(text=t(lang, "funnel_after"), font=dict(size=13, color="#34C759")),
+                height=300, margin=dict(l=10, r=10, t=40, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter, sans-serif"),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_fn_a, width="stretch")
+
+        st.markdown("---")
         st.markdown(t(lang, "timeline_title"))
         _tl_rate     = _CURRENCIES[currency]["rate"]
         _tl_label    = _CURRENCIES[currency]["label"]
@@ -1239,7 +1368,12 @@ def run_dashboard():
         # ── MONTE CARLO ──────────────────────────────────────────────────────
         st.subheader(t(lang, "mc_title"))
         with st.spinner("Running simulation…"):
-            _mc = run_monte_carlo(inp, n=5000)
+            _mc = _cached_mc(
+                manual_hours, automation_rate, hour_rate,
+                error_before, error_after, cost_per_error, volume,
+                cycle_before, cycle_after, deals, deal_value,
+                p_before, p_after, impl_cost, pipeline_util,
+            )
 
         _mc_c1, _mc_c2, _mc_c3 = st.columns(3)
         _mc_c1.metric(t(lang, "mc_p_positive"),  "{:.1f}%".format(_mc.p_positive  * 100))
@@ -1279,6 +1413,45 @@ def run_dashboard():
             **CHART_LAYOUT,
         )
         st.plotly_chart(_fig_mc, width="stretch")
+
+        # ── Scatter: Risk / Return Cloud ──────────────────────────────────────
+        st.subheader(t(lang, "scatter_title"))
+        _sc_rate   = _prec_rate
+        _sc_median = _mc.pct50
+        _sc_step   = max(len(_mc.roi_samples) // 800, 1)
+        _sc_sample = _mc.roi_samples[::_sc_step]
+        _sc_x_raw  = [((v - _sc_median) / max(abs(_sc_median), 1)) * 100 for v in _sc_sample]
+        _sc_y_raw  = [v * _sc_rate for v in _sc_sample]
+        _sc_colors = ["#34C759" if v >= 0 else "#FF3B30" for v in _sc_sample]
+        _sc_labels = [t(lang, "scatter_positive") if v >= 0 else t(lang, "scatter_negative")
+                      for v in _sc_sample]
+        fig_scatter = go.Figure()
+        fig_scatter.add_trace(go.Scatter(
+            x=[x for x, v in zip(_sc_x_raw, _sc_sample) if v >= 0],
+            y=[y for y, v in zip(_sc_y_raw, _sc_sample) if v >= 0],
+            mode="markers",
+            name=t(lang, "scatter_positive"),
+            marker=dict(color="#34C759", size=4, opacity=0.45,
+                        line=dict(color="rgba(0,0,0,0)", width=0)),
+        ))
+        fig_scatter.add_trace(go.Scatter(
+            x=[x for x, v in zip(_sc_x_raw, _sc_sample) if v < 0],
+            y=[y for y, v in zip(_sc_y_raw, _sc_sample) if v < 0],
+            mode="markers",
+            name=t(lang, "scatter_negative"),
+            marker=dict(color="#FF3B30", size=4, opacity=0.45,
+                        line=dict(color="rgba(0,0,0,0)", width=0)),
+        ))
+        fig_scatter.add_hline(y=0, line_dash="dash", line_color="#FF3B30", line_width=1.5,
+                              annotation_text="ROI=0", annotation_position="bottom right")
+        fig_scatter.add_vline(x=0, line_dash="dot", line_color="#AEAEB2", line_width=1)
+        fig_scatter.update_layout(
+            xaxis_title=t(lang, "scatter_x"),
+            yaxis_title=t(lang, "scatter_y") + f" ({_prec_label})",
+            height=320,
+            **CHART_LAYOUT,
+        )
+        st.plotly_chart(fig_scatter, width="stretch")
 
         st.markdown("---")
 
@@ -1357,6 +1530,151 @@ def run_dashboard():
             **_proj_layout,
         )
         st.plotly_chart(_fig_proj, width="stretch")
+
+    # ── TAB 7: ABOUT ──────────────────────────────────────────────────────────
+    with tab7:
+        _ab = {
+            "en": {
+                "subtitle": "Professional ROI audit tool for automation projects",
+                "author_title": "About the Author",
+                "author_body": (
+                    "**Andrew** — AI Product Advisor & Automation Consultant, Serbia/EU. "
+                    "20+ years in enterprise software, CRM/ERP integrations, and process intelligence. "
+                    "Trusted by mid-market companies across Eastern Europe and the Balkans."
+                ),
+                "method_title": "Methodology",
+                "method_body": (
+                    "OmniCore ROI Auditor combines 5 independent quantitative models:\n\n"
+                    "**1. Labor Savings** — Hours freed × automation rate × hourly cost\n\n"
+                    "**2. Error Reduction** — Volume × (rate_before − rate_after) × cost_per_error × 12\n\n"
+                    "**3. Cycle Acceleration** — Days saved → more deal completions per year\n\n"
+                    "**4. Markov Chain (Conversion Lift)** — Absorbing Markov chains model each "
+                    "pipeline stage. P(complete) uplift drives Markov-weighted annual gain.\n\n"
+                    "**5. Bayesian Confidence** — Beta-Binomial update on observed signals adjusts "
+                    "the ROI output by real-world confidence."
+                ),
+                "tech_title": "Technical Stack",
+                "tech_body": "Python 3.12 · Streamlit 1.44 · NumPy · SciPy · NetworkX · Plotly · ReportLab",
+                "changelog_title": "Changelog",
+                "changelog": [
+                    ("v3.2", "Sprint 1–3: expanders, help texts, gauge/radar, funnel, scatter, bullet, @cache, About page"),
+                    ("v3.1", "Multilingual PDF export (EN/RU/SR), number formatting, LinkedIn passport"),
+                    ("v3.0", "Tornado sensitivity, Monte Carlo 5 000 runs, NPV/IRR, 3-year projection"),
+                    ("v2.0", "NetworkX bottleneck graph, Bayesian update, ETL CSV pipeline"),
+                    ("v1.0", "Core ROI engine, Markov chains, freemium demo mode"),
+                ],
+            },
+            "ru": {
+                "subtitle": "Профессиональный инструмент ROI-аудита для проектов автоматизации",
+                "author_title": "Об авторе",
+                "author_body": (
+                    "**Андрей** — AI Product Advisor и консультант по автоматизации, Сербия/ЕС. "
+                    "20+ лет в enterprise-разработке, CRM/ERP-интеграциях и process intelligence. "
+                    "Работает с компаниями среднего рынка в Восточной Европе и на Балканах."
+                ),
+                "method_title": "Методология",
+                "method_body": (
+                    "OmniCore ROI Auditor сочетает 5 независимых количественных моделей:\n\n"
+                    "**1. Экономия труда** — Освобождённые часы × ставку автоматизации × стоимость часа\n\n"
+                    "**2. Снижение ошибок** — Объём × (до − после) × стоимость ошибки × 12\n\n"
+                    "**3. Ускорение цикла** — Сэкономленные дни → больше сделок в год\n\n"
+                    "**4. Цепи Маркова** — Поглощающие цепи Маркова моделируют каждую стадию пайплайна. "
+                    "Прирост P(завершение) даёт взвешенный годовой выигрыш.\n\n"
+                    "**5. Байесовское доверие** — Beta-Binomial-обновление по сигналам корректирует "
+                    "ROI с учётом реального уровня уверенности."
+                ),
+                "tech_title": "Технический стек",
+                "tech_body": "Python 3.12 · Streamlit 1.44 · NumPy · SciPy · NetworkX · Plotly · ReportLab",
+                "changelog_title": "История версий",
+                "changelog": [
+                    ("v3.2", "Спринты 1–3: expanders, help, gauge/radar, воронка, scatter, bullet, @cache, страница О приложении"),
+                    ("v3.1", "Многоязычный PDF-экспорт (EN/RU/SR), форматирование чисел, LinkedIn-паспорт"),
+                    ("v3.0", "Tornado, Монте-Карло 5 000 итераций, NPV/IRR, 3-летний прогноз"),
+                    ("v2.0", "NetworkX граф узких мест, байесовское обновление, ETL CSV-пайплайн"),
+                    ("v1.0", "Ядро ROI-движка, цепи Маркова, демо-режим freemium"),
+                ],
+            },
+            "sr": {
+                "subtitle": "Profesionalni alat za ROI reviziju projekata automatizacije",
+                "author_title": "O autoru",
+                "author_body": (
+                    "**Andrej** — AI Product Advisor i konsultant za automatizaciju, Srbija/EU. "
+                    "20+ godina u enterprise softveru, CRM/ERP integracijama i process intelligence. "
+                    "Sarađuje sa kompanijama srednje veličine u Istočnoj Evropi i na Balkanu."
+                ),
+                "method_title": "Metodologija",
+                "method_body": (
+                    "OmniCore ROI Auditor kombinuje 5 nezavisnih kvantitativnih modela:\n\n"
+                    "**1. Ušteda rada** — Oslobođeni sati × stopa automatizacije × cena sata\n\n"
+                    "**2. Smanjenje grešaka** — Obim × (pre − posle) × trošak greške × 12\n\n"
+                    "**3. Ubrzanje ciklusa** — Ušteda dana → više poslova godišnje\n\n"
+                    "**4. Markovljevi lanci** — Apsorbujući Markovljevi lanci modeluju svaku fazu pipeline-a. "
+                    "Porast P(završetak) daje Markovljevski ponderisani godišnji dobitak.\n\n"
+                    "**5. Bajesovsko poverenje** — Beta-Binomial ažuriranje na osnovu signala koriguje "
+                    "ROI stvarnim nivoom pouzdanosti."
+                ),
+                "tech_title": "Tehnički stek",
+                "tech_body": "Python 3.12 · Streamlit 1.44 · NumPy · SciPy · NetworkX · Plotly · ReportLab",
+                "changelog_title": "Istorija verzija",
+                "changelog": [
+                    ("v3.2", "Sprintovi 1–3: expanders, help, gauge/radar, levak, scatter, bullet, @cache, O aplikaciji"),
+                    ("v3.1", "Višejezični PDF izvoz (EN/RU/SR), formatiranje brojeva, LinkedIn pasoš"),
+                    ("v3.0", "Tornado, Monte Karlo 5 000 iteracija, NPV/IRR, 3-godišnja projekcija"),
+                    ("v2.0", "NetworkX graf uskih grla, bajesovsko ažuriranje, ETL CSV pipeline"),
+                    ("v1.0", "Jezgro ROI motora, Markovljevi lanci, freemium demo mod"),
+                ],
+            },
+        }.get(lang, {}).copy() or {
+            "en": {"subtitle": "Professional ROI audit tool"}
+        }["en"]
+
+        # Hero card
+        st.markdown(
+            f'<div style="background:linear-gradient(135deg,#1D1D1F 0%,#2C2C2E 100%);'
+            f'border-radius:18px;padding:32px 36px;margin-bottom:24px;">'
+            f'<h2 style="color:#fff;font-size:24px;font-weight:700;margin:0 0 6px;">'
+            f'{t(lang, "about_title")}</h2>'
+            f'<p style="color:#AEAEB2;font-size:14px;margin:0;">{_ab.get("subtitle","")}</p>'
+            f'<p style="color:#6E6E73;font-size:12px;margin:12px 0 0;">'
+            f'{t(lang, "about_version")} · 2024–2025</p>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        _card = (
+            "background:#F5F5F7;border-radius:14px;padding:20px 24px;margin-bottom:16px;"
+        )
+        _h3 = "font-size:16px;font-weight:700;color:#1D1D1F;margin:0 0 10px;"
+        _p  = "font-size:13px;color:#3A3A3C;margin:0;line-height:1.6;"
+
+        ab1, ab2 = st.columns([1, 1])
+        with ab1:
+            st.markdown(
+                f'<div style="{_card}"><p style="{_h3}">{_ab.get("author_title","")}</p>'
+                f'<p style="{_p}">{_ab.get("author_body","").replace("**", "")}</p></div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f'<div style="{_card}"><p style="{_h3}">{_ab.get("tech_title","")}</p>'
+                f'<p style="{_p}">{_ab.get("tech_body","")}</p></div>',
+                unsafe_allow_html=True,
+            )
+
+        with ab2:
+            with st.expander(_ab.get("method_title", "Methodology"), expanded=True):
+                st.markdown(_ab.get("method_body", ""), unsafe_allow_html=False)
+
+        st.markdown(f'<div style="{_card}"><p style="{_h3}">{_ab.get("changelog_title","")}</p>', unsafe_allow_html=True)
+        for _ver, _desc in _ab.get("changelog", []):
+            st.markdown(
+                f'<div style="display:flex;gap:12px;padding:7px 0;border-bottom:1px solid rgba(0,0,0,0.06);">'
+                f'<span style="background:#0071E3;color:#fff;border-radius:6px;padding:2px 9px;'
+                f'font-size:11px;font-weight:600;white-space:nowrap;min-width:42px;text-align:center;">'
+                f'{_ver}</span>'
+                f'<span style="font-size:13px;color:#3A3A3C;">{_desc}</span></div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ── FAQ / METHODOLOGY ──────────────────────────────────────────────────────
     st.markdown("---")
