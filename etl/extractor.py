@@ -132,23 +132,142 @@ class MatrixExtractor:
             avg_deal_value=round(avg_deal_value, 2),
         )
 
+    @staticmethod
+    def _clean_state(name: str) -> str:
+        """Убирает пометки в скобках: 'Development (Возврат!)' → 'Development'."""
+        import re
+        return re.sub(r"\s*\(.*?\)\s*$", "", str(name)).strip()
+
+    @staticmethod
+    def _detect_format(columns: list) -> str:
+        """
+        Определяет формат CSV по именам колонок.
+        Возвращает 'transition_log' или 'deal_timeline'.
+        """
+        cols_lower = [c.lower() for c in columns]
+        has_stage    = any("stage" in c for c in cols_lower)
+        has_next     = any("next" in c for c in cols_lower)
+        has_deal_id  = any(c in ("deal_id",) for c in cols_lower)
+        has_status   = any(c == "status" for c in cols_lower)
+        if has_stage and has_next and not (has_deal_id and has_status):
+            return "transition_log"
+        return "deal_timeline"
+
+    def _from_transition_log(self, df: pd.DataFrame) -> ProcessLog:
+        """
+        Парсит формат: Task_ID | Stage | Time_Spent (дни) | Next_Stage.
+        Колонки определяются по частичному совпадению имён.
+        """
+        cols = df.columns.tolist()
+
+        def find_col(keywords):
+            for k in keywords:
+                for c in cols:
+                    if k.lower() in c.lower():
+                        return c
+            return None
+
+        col_id    = find_col(["task_id", "deal_id", "id"])
+        col_stage = find_col(["stage", "status", "состояние"])
+        col_time  = find_col(["time_spent", "time", "дней", "days", "duration"])
+        col_next  = find_col(["next_stage", "next", "переход", "transition"])
+
+        if not col_id or not col_stage or not col_next:
+            raise ValueError(f"Не найдены нужные колонки. Есть: {cols}")
+
+        sequences  = {}
+        time_spent = {}
+        cycle_days = []
+
+        for task_id, group in df.groupby(col_id):
+            group = group.reset_index(drop=True)
+            stages = [self._clean_state(s) for s in group[col_stage].tolist()]
+            nexts  = [self._clean_state(s) for s in group[col_next].tolist()]
+
+            full_seq = stages[:1]
+            for nxt in nexts:
+                full_seq.append(nxt)
+            sequences[task_id] = full_seq
+
+            if col_time:
+                days_list = pd.to_numeric(group[col_time], errors="coerce").fillna(0).tolist()
+                time_spent[task_id] = days_list
+                total_days = sum(days_list)
+                if total_days > 0:
+                    cycle_days.append(total_days)
+
+        from collections import defaultdict
+        transition_counts = defaultdict(lambda: defaultdict(int))
+        time_in_state     = defaultdict(list)
+
+        for task_id, seq in sequences.items():
+            days = time_spent.get(task_id, [])
+            for i in range(len(seq) - 1):
+                frm = seq[i]
+                to  = seq[i + 1]
+                transition_counts[frm][to] += 1
+                if i < len(days):
+                    time_in_state[frm].append(days[i] * 24)
+
+        all_states = sorted(set(s for seq in sequences.values() for s in seq))
+        outgoing   = {s: sum(transition_counts[s].values()) for s in all_states}
+
+        absorbing_states = sorted([
+            s for s in all_states
+            if self._is_absorbing_by_keyword(s) or outgoing.get(s, 0) == 0
+        ])
+        transient_states = sorted([s for s in all_states if s not in absorbing_states])
+
+        n   = len(transient_states)
+        idx = {s: i for i, s in enumerate(transient_states)}
+        Q   = np.zeros((n, n))
+
+        for frm in transient_states:
+            row_total = sum(
+                cnt for to, cnt in transition_counts[frm].items() if to in idx
+            )
+            if row_total > 0:
+                for to, cnt in transition_counts[frm].items():
+                    if to in idx:
+                        Q[idx[frm]][idx[to]] = cnt / row_total
+            else:
+                Q[idx[frm]][idx[frm]] = 1.0
+
+        avg_time_per_state = {
+            s: round(float(np.mean(times)), 4) if times else 0.0
+            for s, times in time_in_state.items()
+        }
+
+        total_deals = len(sequences)
+        avg_cycle   = float(np.mean(cycle_days)) if cycle_days else 0.0
+
+        return ProcessLog(
+            matrix_Q=Q,
+            states_all=all_states,
+            states_transient=transient_states,
+            absorbing_states=absorbing_states,
+            avg_time_per_state=avg_time_per_state,
+            raw_counts={frm: dict(tos) for frm, tos in transition_counts.items()},
+            total_deals=total_deals,
+            error_rate=0.0,
+            avg_cycle_days=round(avg_cycle, 2),
+            avg_deal_value=0.0,
+        )
+
     def from_csv(self, filepath: str) -> ProcessLog:
         """
-        Читает CSV-файл и строит ProcessLog из данных сделок.
-
-        Ожидаемые колонки: Deal_ID, Status, Timestamp, Has_Error, Deal_Value.
-        Timestamp парсится как datetime; строки сортируются по Deal_ID, затем Timestamp.
-
-        Параметры:
-            filepath: путь к CSV-файлу
-
-        Возвращает:
-            ProcessLog с матрицей переходов и агрегированными метриками.
-
-        Исключения:
-            Перехватывает все ошибки и возвращает пустой ProcessLog при сбое.
+        Читает CSV и автоматически определяет формат:
+        - transition_log: Task_ID | Stage | Time_Spent | Next_Stage
+        - deal_timeline:  Deal_ID | Status | Timestamp | Has_Error | Deal_Value
         """
         try:
+            df  = pd.read_csv(filepath)
+            fmt = self._detect_format(df.columns.tolist())
+            print(f"[MatrixExtractor.from_csv] Формат: {fmt}")
+
+            if fmt == "transition_log":
+                return self._from_transition_log(df)
+
             df = pd.read_csv(filepath, parse_dates=["Timestamp"])
             df = df.sort_values(["Deal_ID", "Timestamp"]).reset_index(drop=True)
 
