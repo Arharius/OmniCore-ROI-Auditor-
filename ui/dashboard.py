@@ -656,16 +656,27 @@ def run_dashboard():
     ]
     graph_res = math_eng.graph_bottleneck(default_edges)
 
+    _default_Q      = np.array([[0.2, 0.3], [0.1, 0.4]])
+    _default_states = ["Qualification", "Proposal"] if lang == "en" else (
+                      ["Квалификация", "Предложение"] if lang == "ru" else
+                      ["Kvalifikacija", "Ponuda"])
     if csv_file is not None:
         extractor = MatrixExtractor()
         process_log = extractor.from_csv(csv_file)
-        Q_mat   = process_log.matrix_Q
-        m_states = process_log.states_transient
+        _q = process_log.matrix_Q
+        _s = process_log.states_transient
+        if len(_s) > 0 and _q.shape[0] == len(_s) and _q.shape[1] == len(_s):
+            Q_mat    = _q
+            m_states = _s
+        else:
+            st.warning("⚠️ CSV format not recognised — demo data loaded." if lang == "en" else
+                       "⚠️ CSV не распознан — загружены демо-данные." if lang == "ru" else
+                       "⚠️ CSV nije prepoznat — učitani demo podaci.")
+            Q_mat    = _default_Q
+            m_states = _default_states
     else:
-        Q_mat   = np.array([[0.2, 0.3], [0.1, 0.4]])
-        m_states = ["Qualification", "Proposal"] if lang == "en" else (
-                   ["Квалификация", "Предложение"] if lang == "ru" else
-                   ["Kvalifikacija", "Ponuda"])
+        Q_mat    = _default_Q
+        m_states = _default_states
 
     state_times = np.full(len(m_states), float(cycle_before) * 24 / max(len(m_states), 1))
     try:
