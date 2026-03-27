@@ -23,6 +23,7 @@ class ProcessLog:
     error_rate: float
     avg_cycle_days: float
     avg_deal_value: float
+    clean_completions: int = 0
 
 
 class MatrixExtractor:
@@ -241,6 +242,11 @@ class MatrixExtractor:
         total_deals = len(sequences)
         avg_cycle   = float(np.mean(cycle_days)) if cycle_days else 0.0
 
+        clean_completions = sum(
+            1 for seq in sequences.values()
+            if len(seq) == len(set(seq))
+        )
+
         return ProcessLog(
             matrix_Q=Q,
             states_all=all_states,
@@ -252,6 +258,7 @@ class MatrixExtractor:
             error_rate=0.0,
             avg_cycle_days=round(avg_cycle, 2),
             avg_deal_value=0.0,
+            clean_completions=clean_completions,
         )
 
     def from_csv(self, filepath: str) -> ProcessLog:
