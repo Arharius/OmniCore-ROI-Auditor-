@@ -6,6 +6,13 @@ from datetime import datetime
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
+from db.database import (
+    load_history as db_load_history,
+    save_audit   as db_save_audit,
+    delete_audit as db_delete_audit,
+    db_available,
+)
+
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -90,43 +97,38 @@ _BENCHMARKS = {
 
 
 # ── Client history ─────────────────────────────────────────────────────────────
-_HISTORY_FILE = os.path.join(parent_dir, "data", "clients.json")
-
 _PARAM_KEYS = ["manual_hours", "automation_rate", "hour_rate",
                "error_before", "error_after", "cost_per_error", "volume",
                "cycle_before", "cycle_after", "deals_month", "deal_value",
                "p_before", "p_after", "impl_cost"]
 
 def _load_history() -> list:
-    try:
-        if os.path.exists(_HISTORY_FILE):
-            with open(_HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except Exception:
-        pass
-    return []
+    return db_load_history()
 
-def _save_to_history(company_name: str) -> bool:
-    try:
-        params = {k: st.session_state.get(k) for k in _PARAM_KEYS}
-        history = _load_history()
-        history = [h for h in history if h.get("company_name") != company_name]
-        history.insert(0, {
-            "company_name": company_name,
-            "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "params": params,
-        })
-        history = history[:15]
-        os.makedirs(os.path.dirname(_HISTORY_FILE), exist_ok=True)
-        with open(_HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-        return True
-    except Exception:
-        return False
+def _save_to_history(company_name: str, extra: dict | None = None) -> bool:
+    params = {k: st.session_state.get(k) for k in _PARAM_KEYS}
+    kw = extra or {}
+    return db_save_audit(
+        company_name        = company_name,
+        params              = params,
+        friction_tax_usd    = kw.get("friction_tax_usd"),
+        adjusted_confidence_pct = kw.get("adjusted_confidence_pct"),
+        bottleneck_stage    = kw.get("bottleneck_stage"),
+        roi_pct             = kw.get("roi_pct"),
+        rework_rate_pct     = kw.get("rework_rate_pct"),
+        total_transitions   = kw.get("total_transitions"),
+        total_rework        = kw.get("total_rework"),
+    )
 
 def _restore_from_history(entry: dict):
     st.session_state["company_name"] = entry.get("company_name", "")
-    for k, v in entry.get("params", {}).items():
+    raw_params = entry.get("params") or {}
+    if isinstance(raw_params, str):
+        try:
+            raw_params = json.loads(raw_params)
+        except Exception:
+            raw_params = {}
+    for k, v in raw_params.items():
         if v is not None:
             st.session_state[k] = v
 
@@ -482,7 +484,16 @@ def run_dashboard():
         st.markdown(t(lang, "history_section"))
         h_col1, h_col2 = st.columns(2)
         if h_col1.button(t(lang, "save_client"), key="btn_save_hist", use_container_width=True):
-            if _save_to_history(company_name):
+            _extra = {
+                "friction_tax_usd":         st.session_state.get("_saved_friction_tax"),
+                "adjusted_confidence_pct":  st.session_state.get("_saved_confidence"),
+                "bottleneck_stage":         st.session_state.get("_saved_bottleneck"),
+                "roi_pct":                  st.session_state.get("_saved_roi_pct"),
+                "rework_rate_pct":          st.session_state.get("_saved_rework_rate"),
+                "total_transitions":        st.session_state.get("_saved_total_transitions"),
+                "total_rework":             st.session_state.get("_saved_total_rework"),
+            }
+            if _save_to_history(company_name, _extra):
                 st.toast(t(lang, "saved_ok"))
 
         history = _load_history()
@@ -499,6 +510,10 @@ def run_dashboard():
 
         st.markdown("---")
         st.caption(t(lang, "footer"))
+        if db_available():
+            st.caption("🟢 PostgreSQL")
+        else:
+            st.caption("🟡 Local JSON (no DATABASE_URL)")
 
     # ── CURRENCY (always read from session state) ──────────────────────────────
     currency = st.session_state.get("currency_select", "EUR")
@@ -594,6 +609,7 @@ def run_dashboard():
     bayes_res = math_eng.bayesian_update(inp.positive_signals, inp.total_signals)
     res = roi_eng.calculate(inp, bayes_result=bayes_res)
     res = _apply_confidence(res, st.session_state.get("scenario_confidence", 0.75))
+    st.session_state["_saved_roi_pct"] = res.roi_pct
 
     process_log = None
     _default_edges = [
@@ -1332,6 +1348,15 @@ def run_dashboard():
             _posterior_pct = _conf["posterior_pct"]
             _delta_pct     = _conf["delta_pct"]
             _lr            = _conf["likelihood_ratio"]
+
+            # ── Persist metrics in session state for "Save client" button ─────
+            st.session_state["_saved_friction_tax"]       = _friction_usd
+            st.session_state["_saved_confidence"]         = _posterior_pct
+            st.session_state["_saved_bottleneck"]         = _bt_node
+            st.session_state["_saved_rework_rate"]        = _mgr.bottleneck_rework_rate * 100.0
+            if _mkv_graph_res is not None:
+                st.session_state["_saved_total_transitions"] = int(_mkv_graph_res.total_transitions)
+                st.session_state["_saved_total_rework"]      = int(_mkv_graph_res.total_rework_transitions)
 
             # ── C-Level metric cards ──────────────────────────────────────────
             _lbl_bt  = {"en": "Bottleneck Stage",
