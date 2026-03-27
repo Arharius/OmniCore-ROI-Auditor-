@@ -267,16 +267,31 @@ class MatrixExtractor:
         - transition_log: Task_ID | Stage | Time_Spent | Next_Stage
         - deal_timeline:  Deal_ID | Status | Timestamp | Has_Error | Deal_Value
         """
+        self.last_error: str = ""
         try:
-            df  = pd.read_csv(filepath)
+            _encodings = ["utf-8", "utf-8-sig", "cp1251", "latin-1"]
+            df = None
+            for _enc in _encodings:
+                try:
+                    if hasattr(filepath, "seek"):
+                        filepath.seek(0)
+                    df = pd.read_csv(filepath, encoding=_enc)
+                    break
+                except (UnicodeDecodeError, Exception):
+                    continue
+            if df is None:
+                raise ValueError("Не удалось прочитать файл ни в одной из кодировок: utf-8, cp1251, latin-1")
+
             fmt = self._detect_format(df.columns.tolist())
-            print(f"[MatrixExtractor.from_csv] Формат: {fmt}")
+            print(f"[MatrixExtractor.from_csv] Формат: {fmt}, колонки: {df.columns.tolist()}")
 
             if fmt == "transition_log":
                 return self._from_transition_log(df)
 
-            df = pd.read_csv(filepath, parse_dates=["Timestamp"])
-            df = df.sort_values(["Deal_ID", "Timestamp"]).reset_index(drop=True)
+            if hasattr(filepath, "seek"):
+                filepath.seek(0)
+            df2 = pd.read_csv(filepath, parse_dates=["Timestamp"])
+            df2 = df2.sort_values(["Deal_ID", "Timestamp"]).reset_index(drop=True)
 
             sequences = {}
             timestamps = {}
@@ -286,7 +301,7 @@ class MatrixExtractor:
             total_rows = 0
             error_rows = 0
 
-            for deal_id, group in df.groupby("Deal_ID"):
+            for deal_id, group in df2.groupby("Deal_ID"):
                 statuses = group["Status"].tolist()
                 times = group["Timestamp"].tolist()
                 sequences[deal_id] = statuses
@@ -311,6 +326,7 @@ class MatrixExtractor:
             )
 
         except Exception as e:
+            self.last_error = str(e)
             print(f"[MatrixExtractor.from_csv] Ошибка: {e}")
             return ProcessLog(
                 matrix_Q=np.zeros((1, 1)),
