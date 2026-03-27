@@ -516,6 +516,31 @@ def run_dashboard():
                 t(lang, "csv_label"), type=["csv"], help=t(lang, "csv_help"), key="csv_file"
             )
 
+        # ── Pre-scan CSV BEFORE sliders are rendered ──────────────────────────
+        # Streamlit rule: session_state keys bound to widgets cannot be set
+        # after the widget is instantiated. So we read the CSV here — before
+        # any slider is rendered — and write derived values into session state.
+        if csv_file is not None:
+            _pre_fname = getattr(csv_file, "name", "") or ""
+            _pre_fsize = str(getattr(csv_file, "size", 0))
+            _pre_key   = f"_csv_prescan:{_pre_fname}:{_pre_fsize}"
+            if st.session_state.get("_csv_prescan_key") != _pre_key:
+                try:
+                    _pre_log = MatrixExtractor().from_csv(csv_file)
+                    if _pre_log.total_deals > 0:
+                        st.session_state["_csv_prescan_key"] = _pre_key
+                        if _pre_log.avg_cycle_days > 0:
+                            st.session_state["cycle_before"] = max(
+                                1, int(round(_pre_log.avg_cycle_days))
+                            )
+                        st.session_state["volume"] = max(10, _pre_log.total_deals)
+                        st.session_state["pos_signals"] = max(
+                            1, min(_pre_log.clean_completions, _pre_log.total_deals)
+                        )
+                        st.session_state["tot_signals"] = max(2, _pre_log.total_deals)
+                except Exception:
+                    pass
+
         _slider_defaults = {
             "manual_hours": 320, "automation_rate": 86, "hour_rate": 12,
             "error_before": 8.5, "error_after": 1.2, "cost_per_error": 95, "volume": 600,
@@ -681,24 +706,8 @@ def run_dashboard():
                 _active_edges = _csv_edges
                 graph_res = math_eng.graph_bottleneck(_active_edges)
 
-            # ── Fix 2: auto-populate sliders from CSV (once per file) ──────────
-            _csv_fname = getattr(csv_file, "name", "") or ""
-            _csv_fsize = str(getattr(csv_file, "size", 0))
-            _csv_bayes_key = f"_bayes_csv:{_csv_fname}:{_csv_fsize}"
-            if st.session_state.get("_bayes_csv_key") != _csv_bayes_key:
-                st.session_state["_bayes_csv_key"] = _csv_bayes_key
-                _pos = max(1, min(process_log.clean_completions, process_log.total_deals))
-                _tot = max(2, process_log.total_deals)
-                st.session_state["pos_signals"] = _pos
-                st.session_state["tot_signals"] = _tot
-                # auto-set cycle_before from CSV avg_cycle_days
-                if process_log.avg_cycle_days > 0:
-                    st.session_state["cycle_before"] = max(
-                        1, int(round(process_log.avg_cycle_days))
-                    )
-                # auto-set volume from total_deals (at least 10)
-                if process_log.total_deals > 0:
-                    st.session_state["volume"] = max(10, process_log.total_deals)
+            # sliders (cycle_before, volume, pos_signals, tot_signals) are
+            # pre-populated from CSV in the pre-scan block above (before widgets)
         else:
             _err_detail = getattr(extractor, "last_error", "")
             _err_msg = {
