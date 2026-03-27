@@ -544,7 +544,7 @@ def run_dashboard():
                 st.warning(t(lang, "val_error_rate"))
             cost_per_error = st.slider(t(lang, "cost_per_error"), 20, 500,       key="cost_per_error",
                                        help=t(lang, "help_cost_per_error"))
-            volume         = st.slider(t(lang, "volume"),        100, 2000,      key="volume",
+            volume         = st.slider(t(lang, "volume"),        10, 2000,       key="volume",
                                        help=t(lang, "help_volume"))
 
         with st.expander("🔄 " + t(lang, "cycle_section").strip("*"), expanded=False):
