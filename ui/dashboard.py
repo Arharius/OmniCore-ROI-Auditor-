@@ -647,14 +647,14 @@ def run_dashboard():
     res = roi_eng.calculate(inp, bayes_result=bayes_res)
     res = _apply_confidence(res, st.session_state.get("scenario_confidence", 0.75))
 
-    default_edges = [
+    _default_edges = [
         ("Lead", "In Review", 3.0),
         ("In Review", "Approved", 0.8),
         ("In Review", "Revision", 0.6),
         ("Revision", "In Review", 0.7),
         ("Revision", "Rejected", 0.4),
     ]
-    graph_res = math_eng.graph_bottleneck(default_edges)
+    graph_res = math_eng.graph_bottleneck(_default_edges)
 
     _default_Q      = np.array([[0.2, 0.3], [0.1, 0.4]])
     _default_states = ["Qualification", "Proposal"] if lang == "en" else (
@@ -668,6 +668,24 @@ def run_dashboard():
         if len(_s) > 0 and _q.shape[0] == len(_s) and _q.shape[1] == len(_s):
             Q_mat    = _q
             m_states = _s
+
+            # ── Fix 1: build graph edges from real CSV transitions ──────────────
+            _csv_edges = [
+                (frm, to, float(count))
+                for frm, targets in process_log.raw_counts.items()
+                for to, count in targets.items()
+            ]
+            if _csv_edges:
+                graph_res = math_eng.graph_bottleneck(_csv_edges)
+
+            # ── Fix 2: auto-populate Bayesian sliders from CSV (once per file) ─
+            _csv_bayes_key = f"_bayes_csv:{csv_file}"
+            if st.session_state.get("_bayes_csv_key") != _csv_bayes_key:
+                st.session_state["_bayes_csv_key"] = _csv_bayes_key
+                _pos = max(1, min(process_log.clean_completions, process_log.total_deals))
+                _tot = max(2, process_log.total_deals)
+                st.session_state["pos_signals"] = _pos
+                st.session_state["tot_signals"] = _tot
         else:
             st.warning("⚠️ CSV format not recognised — demo data loaded." if lang == "en" else
                        "⚠️ CSV не распознан — загружены демо-данные." if lang == "ru" else
