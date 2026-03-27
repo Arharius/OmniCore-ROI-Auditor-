@@ -654,7 +654,8 @@ def run_dashboard():
         ("Revision", "In Review", 0.7),
         ("Revision", "Rejected", 0.4),
     ]
-    graph_res = math_eng.graph_bottleneck(_default_edges)
+    _active_edges = _default_edges
+    graph_res = math_eng.graph_bottleneck(_active_edges)
 
     _default_Q      = np.array([[0.2, 0.3], [0.1, 0.4]])
     _default_states = ["Qualification", "Proposal"] if lang == "en" else (
@@ -676,7 +677,8 @@ def run_dashboard():
                 for to, count in targets.items()
             ]
             if _csv_edges:
-                graph_res = math_eng.graph_bottleneck(_csv_edges)
+                _active_edges = _csv_edges
+                graph_res = math_eng.graph_bottleneck(_active_edges)
 
             # ── Fix 2: auto-populate Bayesian sliders from CSV (once per file) ─
             _csv_bayes_key = f"_bayes_csv:{csv_file}"
@@ -1080,7 +1082,7 @@ def run_dashboard():
         angle_step  = 2 * np.pi / max(len(nodes), 1)
         pos = {n: (np.cos(i * angle_step), np.sin(i * angle_step)) for i, n in enumerate(nodes)}
         edge_x, edge_y = [], []
-        for frm, to, _ in default_edges:
+        for frm, to, _ in _active_edges:
             if frm in pos and to in pos:
                 edge_x += [pos[frm][0], pos[to][0], None]
                 edge_y += [pos[frm][1], pos[to][1], None]
