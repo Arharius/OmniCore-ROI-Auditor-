@@ -528,42 +528,42 @@ def run_dashboard():
         st.markdown("---")
 
         with st.expander("💼 " + t(lang, "labor_section").strip("*"), expanded=True):
-            manual_hours    = st.slider(t(lang, "manual_hours"),   50, 600,      key="manual_hours",
+            manual_hours    = st.slider(t(lang, "manual_hours"),    1, 600,      key="manual_hours",
                                         help=t(lang, "help_manual_hours"))
-            automation_rate = st.slider(t(lang, "automation_pct"), 50,  95,      key="automation_rate",
+            automation_rate = st.slider(t(lang, "automation_pct"),  1,  95,      key="automation_rate",
                                         help=t(lang, "help_automation_pct"))
-            hour_rate       = st.slider(t(lang, "hour_rate"),       8,  30,      key="hour_rate",
+            hour_rate       = st.slider(t(lang, "hour_rate"),        1,  30,      key="hour_rate",
                                         help=t(lang, "help_hour_rate"))
 
         with st.expander("⚠️ " + t(lang, "errors_section").strip("*"), expanded=False):
-            error_before   = st.slider(t(lang, "error_before"),  1.0, 20.0, step=0.1, key="error_before",
+            error_before   = st.slider(t(lang, "error_before"),  0.1, 20.0, step=0.1, key="error_before",
                                        help=t(lang, "help_error_before"))
             error_after    = st.slider(t(lang, "error_after"),   0.1,  5.0, step=0.1, key="error_after",
                                        help=t(lang, "help_error_after"))
             if error_after >= error_before:
                 st.warning(t(lang, "val_error_rate"))
-            cost_per_error = st.slider(t(lang, "cost_per_error"), 20, 500,       key="cost_per_error",
+            cost_per_error = st.slider(t(lang, "cost_per_error"),  1, 500,       key="cost_per_error",
                                        help=t(lang, "help_cost_per_error"))
-            volume         = st.slider(t(lang, "volume"),        10, 2000,       key="volume",
+            volume         = st.slider(t(lang, "volume"),           1, 2000,      key="volume",
                                        help=t(lang, "help_volume"))
 
         with st.expander("🔄 " + t(lang, "cycle_section").strip("*"), expanded=False):
-            cycle_before = st.slider(t(lang, "cycle_before"), 5,  60,            key="cycle_before",
+            cycle_before = st.slider(t(lang, "cycle_before"),  1,  60,           key="cycle_before",
                                      help=t(lang, "help_cycle_before"))
-            cycle_after  = st.slider(t(lang, "cycle_after"),  1,  30,            key="cycle_after",
+            cycle_after  = st.slider(t(lang, "cycle_after"),   1,  30,           key="cycle_after",
                                      help=t(lang, "help_cycle_after"))
             if cycle_after >= cycle_before:
                 st.warning(t(lang, "val_cycle"))
-            deals      = st.slider(t(lang, "deals_month"),    5, 200,            key="deals_month",
+            deals      = st.slider(t(lang, "deals_month"),     1, 200,           key="deals_month",
                                    help=t(lang, "help_deals_month"))
-            deal_value = st.number_input(t(lang, "deal_value"), min_value=100, max_value=50000,
+            deal_value = st.number_input(t(lang, "deal_value"), min_value=1, max_value=50000,
                                          step=100, key="deal_value",
                                          help=t(lang, "help_deal_value"))
 
         with st.expander("📐 " + t(lang, "proba_section").strip("*"), expanded=False):
-            p_before = st.slider(t(lang, "p_before"), 50, 95, key="p_before",
+            p_before = st.slider(t(lang, "p_before"),  1, 95, key="p_before",
                                  help=t(lang, "help_p_before"))
-            p_after  = st.slider(t(lang, "p_after"),  70, 99, key="p_after",
+            p_after  = st.slider(t(lang, "p_after"),   1, 99, key="p_after",
                                  help=t(lang, "help_p_after"))
             if p_after < p_before:
                 st.warning(t(lang, "val_p_complete"))
@@ -1468,7 +1468,7 @@ def run_dashboard():
 
         # ── NPV / IRR ────────────────────────────────────────────────────────
         st.subheader(t(lang, "npv_title"))
-        _wacc = st.slider(t(lang, "wacc_label"), 6, 25, value=12, key="wacc_slider")
+        _wacc = st.slider(t(lang, "wacc_label"), 1, 25, value=12, key="wacc_slider")
         _npv_res = compute_npv_irr(
             total_benefit=res.total_benefit,
             impl_cost=float(impl_cost),
