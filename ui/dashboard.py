@@ -689,9 +689,15 @@ def run_dashboard():
                 st.session_state["pos_signals"] = _pos
                 st.session_state["tot_signals"] = _tot
         else:
-            st.warning("⚠️ CSV format not recognised — demo data loaded." if lang == "en" else
-                       "⚠️ CSV не распознан — загружены демо-данные." if lang == "ru" else
-                       "⚠️ CSV nije prepoznat — učitani demo podaci.")
+            _err_detail = getattr(extractor, "last_error", "")
+            _err_msg = {
+                "en": "⚠️ CSV format not recognised — demo data loaded.",
+                "ru": "⚠️ CSV не распознан — загружены демо-данные.",
+                "sr": "⚠️ CSV nije prepoznat — učitani demo podaci.",
+            }[lang]
+            if _err_detail:
+                _err_msg += f"\n\n`{_err_detail}`"
+            st.warning(_err_msg)
             Q_mat    = _default_Q
             m_states = _default_states
     else:
