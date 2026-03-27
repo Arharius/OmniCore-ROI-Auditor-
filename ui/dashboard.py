@@ -31,22 +31,53 @@ from ui.i18n import TRANSLATIONS, LANG_NAMES, t
 
 
 # ── Robust CSV loader (handles garbage rows before real header) ────────────────
-def load_cleaned_csv(uploaded_file) -> "pd.DataFrame | None":
+def load_and_clean_csv(uploaded_file) -> "pd.DataFrame | None":
     """
-    Read a CSV that may contain export artefacts, metadata or empty rows
-    above the real header row.
+    Bulletproof Universal CSV Parser for enterprise exports (Jira, Salesforce, Zendesk).
 
-    Algorithm:
-      1. Decode the file with UTF-8 → cp1251 → latin-1 fallback.
-      2. Split into lines and scan top-down for the first line that:
-           - contains at least 3 commas  (multi-column row)
-           - contains at least one alphanumeric character
-         That line is treated as the true header.
-      3. Everything above is discarded.
-      4. The remaining text is parsed with pd.read_csv via StringIO.
-      5. Columns whose name contains 'Unnamed' are dropped (trailing-comma
-         artefact from Excel exports).
+    Handles files that start with metadata garbage before the real column headers:
+        "Report generated on 2025-01-15"   ← discarded
+        "Table 1: Support Tickets"          ← discarded
+        ""                                  ← discarded
+        "Ticket_ID,Status,Days,Assignee"    ← TRUE HEADER  ← parsing starts here
+        "T-001,Open,3,Alice"
+
+    Algorithm
+    ---------
+    Step 1 — Encoding resilience
+        Read raw bytes from the uploaded file object and decode using a cascade:
+        utf-8-sig (Excel BOM) → utf-8 → cp1251 (Cyrillic Windows) → latin-1 (fallback).
+        First successful decode wins; returns None if all four fail.
+
+    Step 2 — Dynamic header detection (heuristic)
+        Split the decoded text into individual lines.
+        Iterate line-by-line from the top and test each line:
+          a) Split by comma to get candidate columns.
+          b) Count non-empty parts (parts with at least one printable character).
+          c) Accept the line as the TRUE HEADER when BOTH conditions hold:
+               • non_empty_parts > 2        — guarantees multi-column structure
+               • len(line.strip()) > 10     — rejects stray single-word rows
+             The first line satisfying both criteria becomes the header.
+
+    Step 3 — Garbage removal
+        Discard ALL lines above the detected header row index.
+        Re-join header + data lines into a clean CSV block (no metadata noise).
+
+    Step 4 — Pandas normalisation
+        a) Parse the clean block with pd.read_csv via io.StringIO (no temp files).
+        b) Strip leading/trailing whitespace from every column name (export artefact).
+        c) Drop any column whose name contains 'Unnamed' (caused by trailing commas
+           in the source row, e.g., "ID,Status,,," → Unnamed: 2, Unnamed: 3).
+        d) Drop rows where ALL values are NaN or empty strings — leftover blank lines.
+
+    Step 5 — @st.cache_data bypass
+        This function is deliberately NOT decorated with @st.cache_data.
+        Cache invalidation is handled upstream in session_state via _etl_fkey:
+        when the uploaded file name/size changes, mapped_df and col_mapping are
+        cleared from st.session_state before this function is called, so stale
+        data from a previous upload can never pollute the current analysis.
     """
+    # ── Step 1: Encoding resilience ───────────────────────────────────────────
     raw_bytes = uploaded_file.read()
     text: str | None = None
     for enc in ("utf-8-sig", "utf-8", "cp1251", "latin-1"):
@@ -56,32 +87,50 @@ def load_cleaned_csv(uploaded_file) -> "pd.DataFrame | None":
         except (UnicodeDecodeError, LookupError):
             continue
     if text is None:
-        return None
+        return None  # Unreadable binary — cannot proceed
 
+    # ── Step 2: Dynamic header detection (heuristic) ─────────────────────────
     lines = text.splitlines()
     header_idx: int | None = None
     for i, line in enumerate(lines):
-        comma_count = line.count(",")
-        has_alnum   = any(ch.isalnum() for ch in line)
-        if comma_count >= 3 and has_alnum:
+        # Criterion a: count non-empty comma-separated segments
+        parts = line.split(",")
+        non_empty_parts = sum(1 for p in parts if p.strip())
+        # Criterion b: the line itself must be long enough to be a real header
+        substantial_length = len(line.strip()) > 10
+        if non_empty_parts > 2 and substantial_length:
             header_idx = i
-            break
+            break  # First qualifying row is the true header; stop scanning
 
     if header_idx is None:
-        return None
+        return None  # No valid header row found anywhere in the file
 
+    # ── Step 3: Garbage removal ───────────────────────────────────────────────
+    # Everything above header_idx is metadata / report noise — discard it.
     clean_text = "\n".join(lines[header_idx:])
+
+    # ── Step 4: Pandas normalisation ──────────────────────────────────────────
     try:
         df = pd.read_csv(io.StringIO(clean_text))
     except Exception:
-        return None
+        return None  # Malformed CSV even after cleaning
 
-    # Drop Unnamed columns (leading/trailing commas in source)
-    unnamed_cols = [c for c in df.columns if "Unnamed" in str(c)]
-    if unnamed_cols:
-        df = df.drop(columns=unnamed_cols)
+    # 4b — Strip whitespace from column names (common in Salesforce/Zendesk exports)
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # 4c — Drop Unnamed columns (artefact of trailing commas: "a,b,c,,,")
+    df = df.drop(columns=[c for c in df.columns if "Unnamed" in c], errors="ignore")
+
+    # 4d — Drop fully blank rows (empty lines that survived past the header)
+    df = df.dropna(how="all")
+    df = df[~df.apply(lambda row: row.astype(str).str.strip().eq("").all(), axis=1)]
+    df = df.reset_index(drop=True)
 
     return df if not df.empty else None
+
+
+# Backward-compat alias so any other call-site using the old name still works
+load_cleaned_csv = load_and_clean_csv
 
 
 # ── Cached Monte Carlo (Sprint 3) ──────────────────────────────────────────────
@@ -840,13 +889,15 @@ def run_dashboard():
                            "mapped_df", "col_mapping"):
                     st.session_state.pop(_k, None)
 
-            # ── Read CSV (robust: skips garbage rows above real header) ──────
+            # ── Read CSV via bulletproof universal parser ─────────────────
+            # load_and_clean_csv: detects true header, strips garbage rows,
+            # normalises column names, drops Unnamed + all-NaN rows.
             _etl_file.seek(0)
-            _raw_df = load_cleaned_csv(_etl_file)
+            _raw_df = load_and_clean_csv(_etl_file)
             if _raw_df is None:
-                st.error("Не удалось распознать CSV — убедитесь, что файл содержит "
-                         "строку заголовков с 4+ столбцами. / "
-                         "Could not detect a valid header row (need 4+ columns).")
+                st.error("Не удалось распознать CSV — убедитесь, что файл "
+                         "содержит строку заголовков с 3+ непустыми столбцами. / "
+                         "Could not detect a valid header row (need 3+ non-empty columns).")
             else:
                 _cols = list(_raw_df.columns)
 
