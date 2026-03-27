@@ -36,16 +36,23 @@ def _parse_url(url: str) -> dict:
         url = "postgresql://" + url[len("postgres://"):]
     p = urllib.parse.urlparse(url)
     qs = urllib.parse.parse_qs(p.query)
-    ssl_mode = qs.get("sslmode", ["require"])[0]
+    ssl_mode = qs.get("sslmode", [""])[0]
+    host = p.hostname or "localhost"
     kwargs = {
-        "host":     p.hostname or "localhost",
+        "host":     host,
         "port":     p.port    or 5432,
         "database": p.path.lstrip("/"),
         "user":     p.username or "",
         "password": p.password or "",
     }
-    # pg8000 uses ssl_context, not sslmode string
-    if ssl_mode not in ("disable", "disab"):
+    # Determine SSL need:
+    # - explicit sslmode=disable/disab → no SSL
+    # - Render internal hostname (no dot, e.g. dpg-xxx-a) → no SSL needed
+    # - everything else (external or unknown) → enforce SSL
+    _internal = "." not in host
+    if ssl_mode in ("disable", "disab") or _internal:
+        pass  # no SSL
+    else:
         import ssl
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
