@@ -8,6 +8,8 @@ ABSORBING_KEYWORDS = {
     "approved", "closed", "завершён", "закрыт",
     "rejected", "отказ", "cancelled", "отменён",
     "lost", "потерян",
+    "deployed", "production", "abandoned", "done",
+    "complete", "completed", "shipped", "released",
 }
 
 
@@ -140,14 +142,46 @@ class MatrixExtractor:
         return re.sub(r"\s*\(.*?\)\s*$", "", str(name)).strip()
 
     @staticmethod
+    def _find_header_row(filepath, encoding: str = "utf-8") -> int:
+        """
+        Сканирует до 6 строк, чтобы найти строку с реальными заголовками.
+        Возвращает номер строки (skiprows для pd.read_csv).
+        """
+        _kw = [
+            "id", "phase", "stage", "status", "task", "deal", "project",
+            "next", "time", "days", "переход", "этап", "статус", "задач",
+        ]
+        for skip in range(6):
+            try:
+                if hasattr(filepath, "seek"):
+                    filepath.seek(0)
+                df_test = pd.read_csv(filepath, header=skip, nrows=1, encoding=encoding)
+                cols_lower = [str(c).lower() for c in df_test.columns.tolist()]
+                if any(any(kw in c for kw in _kw) for c in cols_lower):
+                    return skip
+            except Exception:
+                continue
+        return 0
+
+    @staticmethod
+    def _clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+        """Убирает пустые колонки и пробелы в именах."""
+        df = df.dropna(axis=1, how="all")
+        df.columns = [str(c).strip() for c in df.columns]
+        df = df[[c for c in df.columns
+                  if c and not c.startswith("Unnamed") and c.strip() != ""]]
+        return df.dropna(how="all")
+
+    @staticmethod
     def _detect_format(columns: list) -> str:
         """
         Определяет формат CSV по именам колонок.
         Возвращает 'transition_log' или 'deal_timeline'.
         """
         cols_lower = [c.lower() for c in columns]
-        has_stage    = any("stage" in c for c in cols_lower)
-        has_next     = any("next" in c for c in cols_lower)
+        has_stage    = any("stage" in c or "phase" in c or "этап" in c
+                           for c in cols_lower)
+        has_next     = any("next" in c or "переход" in c for c in cols_lower)
         has_deal_id  = any(c in ("deal_id",) for c in cols_lower)
         has_status   = any(c == "status" for c in cols_lower)
         if has_stage and has_next and not (has_deal_id and has_status):
@@ -168,10 +202,13 @@ class MatrixExtractor:
                         return c
             return None
 
-        col_id    = find_col(["task_id", "deal_id", "id"])
-        col_stage = find_col(["stage", "status", "состояние"])
-        col_time  = find_col(["time_spent", "time", "дней", "days", "duration"])
-        col_next  = find_col(["next_stage", "next", "переход", "transition"])
+        col_id    = find_col(["project_id", "task_id", "deal_id", "_id", "id"])
+        col_stage = find_col(["current_phase", "phase", "stage", "status",
+                               "этап", "состояние"])
+        col_time  = find_col(["days_in_phase", "time_spent", "дней", "days",
+                               "duration", "time"])
+        col_next  = find_col(["next_phase", "next_stage", "next",
+                               "переход", "transition"])
 
         if not col_id or not col_stage or not col_next:
             raise ValueError(f"Не найдены нужные колонки. Есть: {cols}")
@@ -271,26 +308,32 @@ class MatrixExtractor:
         try:
             _encodings = ["utf-8", "utf-8-sig", "cp1251", "latin-1"]
             df = None
+            _used_enc = "utf-8"
             for _enc in _encodings:
                 try:
+                    _skip = self._find_header_row(filepath, encoding=_enc)
                     if hasattr(filepath, "seek"):
                         filepath.seek(0)
-                    df = pd.read_csv(filepath, encoding=_enc)
+                    df = pd.read_csv(filepath, encoding=_enc, skiprows=_skip)
+                    df = self._clean_dataframe(df)
+                    _used_enc = _enc
                     break
                 except (UnicodeDecodeError, Exception):
                     continue
-            if df is None:
+            if df is None or df.empty:
                 raise ValueError("Не удалось прочитать файл ни в одной из кодировок: utf-8, cp1251, latin-1")
 
             fmt = self._detect_format(df.columns.tolist())
-            print(f"[MatrixExtractor.from_csv] Формат: {fmt}, колонки: {df.columns.tolist()}")
+            print(f"[MatrixExtractor.from_csv] Формат: {fmt}, enc: {_used_enc}, колонки: {df.columns.tolist()}")
 
             if fmt == "transition_log":
                 return self._from_transition_log(df)
 
             if hasattr(filepath, "seek"):
                 filepath.seek(0)
-            df2 = pd.read_csv(filepath, parse_dates=["Timestamp"])
+            df2 = pd.read_csv(filepath, parse_dates=["Timestamp"],
+                               encoding=_used_enc, skiprows=_skip)
+            df2 = self._clean_dataframe(df2)
             df2 = df2.sort_values(["Deal_ID", "Timestamp"]).reset_index(drop=True)
 
             sequences = {}
