@@ -647,6 +647,7 @@ def run_dashboard():
     res = roi_eng.calculate(inp, bayes_result=bayes_res)
     res = _apply_confidence(res, st.session_state.get("scenario_confidence", 0.75))
 
+    process_log = None
     _default_edges = [
         ("Lead", "In Review", 3.0),
         ("In Review", "Approved", 0.8),
@@ -680,14 +681,24 @@ def run_dashboard():
                 _active_edges = _csv_edges
                 graph_res = math_eng.graph_bottleneck(_active_edges)
 
-            # ── Fix 2: auto-populate Bayesian sliders from CSV (once per file) ─
-            _csv_bayes_key = f"_bayes_csv:{csv_file}"
+            # ── Fix 2: auto-populate sliders from CSV (once per file) ──────────
+            _csv_fname = getattr(csv_file, "name", "") or ""
+            _csv_fsize = str(getattr(csv_file, "size", 0))
+            _csv_bayes_key = f"_bayes_csv:{_csv_fname}:{_csv_fsize}"
             if st.session_state.get("_bayes_csv_key") != _csv_bayes_key:
                 st.session_state["_bayes_csv_key"] = _csv_bayes_key
                 _pos = max(1, min(process_log.clean_completions, process_log.total_deals))
                 _tot = max(2, process_log.total_deals)
                 st.session_state["pos_signals"] = _pos
                 st.session_state["tot_signals"] = _tot
+                # auto-set cycle_before from CSV avg_cycle_days
+                if process_log.avg_cycle_days > 0:
+                    st.session_state["cycle_before"] = max(
+                        1, int(round(process_log.avg_cycle_days))
+                    )
+                # auto-set volume from total_deals (at least 10)
+                if process_log.total_deals > 0:
+                    st.session_state["volume"] = max(10, process_log.total_deals)
         else:
             _err_detail = getattr(extractor, "last_error", "")
             _err_msg = {
@@ -704,7 +715,14 @@ def run_dashboard():
         Q_mat    = _default_Q
         m_states = _default_states
 
-    state_times = np.full(len(m_states), float(cycle_before) * 24 / max(len(m_states), 1))
+    if process_log is not None and process_log.avg_time_per_state:
+        _fallback_h = float(cycle_before) * 24 / max(len(m_states), 1)
+        state_times = np.array([
+            process_log.avg_time_per_state.get(s, _fallback_h) or _fallback_h
+            for s in m_states
+        ])
+    else:
+        state_times = np.full(len(m_states), float(cycle_before) * 24 / max(len(m_states), 1))
     try:
         markov_res = math_eng.markov_absorbing(
             Q_mat, state_times, m_states,
