@@ -14,7 +14,7 @@ from scipy import stats
 
 import dataclasses
 
-from core.math_engine import MathEngine
+from core.math_engine import MathEngine, build_markov_graph, MarkovGraphResult
 from core.roi_engine import ROIEngine, ROIInput, ROIResult
 from core.advanced_analytics import run_monte_carlo, run_tornado, compute_npv_irr
 from etl.extractor import MatrixExtractor
@@ -606,46 +606,21 @@ def run_dashboard():
     _active_edges = _default_edges
     graph_res = math_eng.graph_bottleneck(_active_edges)
 
+    # ── Data-driven Markov graph from ETL-mapped DataFrame ──────────────────
+    _mapped_df: pd.DataFrame | None = st.session_state.get("mapped_df")
+    _mkv_graph_res: MarkovGraphResult | None = None
+    if _mapped_df is not None and len(_mapped_df) > 0:
+        try:
+            _mkv_graph_res = build_markov_graph(_mapped_df)
+        except Exception as _e:
+            _mkv_graph_res = None
+
     _default_Q      = np.array([[0.2, 0.3], [0.1, 0.4]])
     _default_states = ["Qualification", "Proposal"] if lang == "en" else (
                       ["Квалификация", "Предложение"] if lang == "ru" else
                       ["Kvalifikacija", "Ponuda"])
-    if csv_file is not None:
-        extractor = MatrixExtractor()
-        process_log = extractor.from_csv(csv_file)
-        _q = process_log.matrix_Q
-        _s = process_log.states_transient
-        if len(_s) > 0 and _q.shape[0] == len(_s) and _q.shape[1] == len(_s):
-            Q_mat    = _q
-            m_states = _s
-
-            # ── Fix 1: build graph edges from real CSV transitions ──────────────
-            _csv_edges = [
-                (frm, to, float(count))
-                for frm, targets in process_log.raw_counts.items()
-                for to, count in targets.items()
-            ]
-            if _csv_edges:
-                _active_edges = _csv_edges
-                graph_res = math_eng.graph_bottleneck(_active_edges)
-
-            # sliders (cycle_before, volume, pos_signals, tot_signals) are
-            # pre-populated from CSV in the pre-scan block above (before widgets)
-        else:
-            _err_detail = getattr(extractor, "last_error", "")
-            _err_msg = {
-                "en": "⚠️ CSV format not recognised — demo data loaded.",
-                "ru": "⚠️ CSV не распознан — загружены демо-данные.",
-                "sr": "⚠️ CSV nije prepoznat — učitani demo podaci.",
-            }[lang]
-            if _err_detail:
-                _err_msg += f"\n\n`{_err_detail}`"
-            st.warning(_err_msg)
-            Q_mat    = _default_Q
-            m_states = _default_states
-    else:
-        Q_mat    = _default_Q
-        m_states = _default_states
+    Q_mat    = _default_Q
+    m_states = _default_states
 
     if process_log is not None and process_log.avg_time_per_state:
         _fallback_h = float(cycle_before) * 24 / max(len(m_states), 1)
@@ -1217,36 +1192,527 @@ def run_dashboard():
 
     # ── TAB 2: GRAPH ──────────────────────────────────────────────────────────
     with tab2:
-        st.subheader(t(lang, "graph_title"))
-        st.info(t(lang, "bottleneck_info", node=graph_res.bottleneck_node, score=graph_res.bottleneck_score))
-        nodes = list(graph_res.betweenness.keys())
-        node_colors = [_C["red"] if n == graph_res.bottleneck_node else _C["navy"] for n in nodes]
-        node_sizes  = [22 + graph_res.betweenness[n] * 200 for n in nodes]
-        angle_step  = 2 * np.pi / max(len(nodes), 1)
-        pos = {n: (np.cos(i * angle_step), np.sin(i * angle_step)) for i, n in enumerate(nodes)}
-        edge_x, edge_y = [], []
-        for frm, to, _ in _active_edges:
-            if frm in pos and to in pos:
-                edge_x += [pos[frm][0], pos[to][0], None]
-                edge_y += [pos[frm][1], pos[to][1], None]
-        fig_g = go.Figure()
-        fig_g.add_trace(go.Scatter(x=edge_x, y=edge_y, mode="lines",
-                                   line=dict(color="rgba(26,50,113,0.15)", width=1.5), hoverinfo="none"))
-        fig_g.add_trace(go.Scatter(
-            x=[pos[n][0] for n in nodes], y=[pos[n][1] for n in nodes],
-            mode="markers+text", text=nodes, textposition="top center",
-            textfont=dict(color="#1a2744", size=11),
-            marker=dict(color=node_colors, size=node_sizes, line=dict(color="rgba(255,255,255,0.9)", width=2)),
-            hovertemplate="%{text}<br>" + t(lang, "centrality_col") + ": %{customdata:.4f}<extra></extra>",
-            customdata=[graph_res.betweenness[n] for n in nodes],
-        ))
-        _no_axes = {k: v for k, v in CHART_LAYOUT.items() if k not in ("xaxis", "yaxis")}
-        fig_g.update_layout(showlegend=False, height=420,
-                            xaxis=dict(visible=False), yaxis=dict(visible=False), **_no_axes)
-        st.plotly_chart(fig_g, width="stretch")
-        st.subheader(t(lang, "centrality_table"))
-        df_bt = pd.DataFrame(graph_res.all_nodes_ranked, columns=[t(lang, "node_col"), t(lang, "centrality_col")])
-        st.dataframe(df_bt)
+        _g_title = {"en": "Process Flow & Bottleneck Analysis",
+                    "ru": "Граф процессов и анализ узких мест",
+                    "sr": "Graf procesa i analiza uskih grla"}.get(lang, "Process Graph")
+        st.subheader(_g_title)
+
+        if _mkv_graph_res is None:
+            _g_upload_hint = {
+                "en": "Upload and map a CSV in the **ETL Pipeline** tab to activate the Markov process graph.",
+                "ru": "Загрузите и замапьте CSV во вкладке **ETL Pipeline**, чтобы активировать граф процессов.",
+                "sr": "Postavite i mapirajte CSV u tabu **ETL Pipeline** da aktivirate grafikon procesa.",
+            }.get(lang, "Upload a CSV to activate the process graph.")
+            st.info(_g_upload_hint)
+
+            # ── Fallback: old static graph ────────────────────────────────────
+            nodes = list(graph_res.betweenness.keys())
+            node_colors = [_C["red"] if n == graph_res.bottleneck_node else _C["navy"] for n in nodes]
+            node_sizes  = [22 + graph_res.betweenness[n] * 200 for n in nodes]
+            angle_step  = 2 * np.pi / max(len(nodes), 1)
+            pos = {n: (np.cos(i * angle_step), np.sin(i * angle_step)) for i, n in enumerate(nodes)}
+            edge_x, edge_y = [], []
+            for frm, to, _ in _active_edges:
+                if frm in pos and to in pos:
+                    edge_x += [pos[frm][0], pos[to][0], None]
+                    edge_y += [pos[frm][1], pos[to][1], None]
+            fig_g = go.Figure()
+            fig_g.add_trace(go.Scatter(x=edge_x, y=edge_y, mode="lines",
+                                       line=dict(color="rgba(26,50,113,0.15)", width=1.5),
+                                       hoverinfo="none"))
+            fig_g.add_trace(go.Scatter(
+                x=[pos[n][0] for n in nodes], y=[pos[n][1] for n in nodes],
+                mode="markers+text", text=nodes, textposition="top center",
+                textfont=dict(color="#1a2744", size=11),
+                marker=dict(color=node_colors, size=node_sizes,
+                            line=dict(color="rgba(255,255,255,0.9)", width=2)),
+                hovertemplate="%{text}<br>" + t(lang, "centrality_col") + ": %{customdata:.4f}<extra></extra>",
+                customdata=[graph_res.betweenness[n] for n in nodes],
+            ))
+            _no_axes = {k: v for k, v in CHART_LAYOUT.items() if k not in ("xaxis", "yaxis")}
+            fig_g.update_layout(showlegend=False, height=380,
+                                xaxis=dict(visible=False), yaxis=dict(visible=False),
+                                **_no_axes)
+            st.plotly_chart(fig_g, width="stretch")
+
+        else:
+            # ── FULL DATA-DRIVEN MARKOV GRAPH ─────────────────────────────────
+            _mgr = _mkv_graph_res
+            _G   = _mgr.G
+
+            # ── Corporate CSS injection ───────────────────────────────────────
+            st.markdown("""
+<style>
+.clevel-block {
+    background: #1D1D1F;
+    border-radius: 14px;
+    padding: 28px 32px 22px;
+    margin-bottom: 24px;
+}
+.clevel-rule {
+    border: none;
+    border-top: 1px solid #3A3A3C;
+    margin: 0 0 22px;
+}
+.clevel-section-label {
+    font-family: 'SF Mono', 'Courier New', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: #48484A;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+}
+[data-testid="stMetric"] {
+    background: #2C2C2E;
+    border-radius: 10px;
+    padding: 16px 20px 14px;
+}
+[data-testid="stMetricLabel"] > div {
+    font-family: 'SF Mono', 'Courier New', monospace !important;
+    font-size: 9px !important;
+    letter-spacing: 2.5px !important;
+    color: #8E8E93 !important;
+    text-transform: uppercase !important;
+}
+[data-testid="stMetricValue"] {
+    font-family: 'SF Mono', 'Courier New', monospace !important;
+    font-size: 26px !important;
+    color: #F5F5F7 !important;
+    font-weight: 600 !important;
+}
+[data-testid="stMetricDelta"] {
+    font-family: 'SF Mono', 'Courier New', monospace !important;
+    font-size: 11px !important;
+}
+</style>""", unsafe_allow_html=True)
+
+            # ── Prior probability slider ──────────────────────────────────────
+            _prior_label = {
+                "en": "Prior Probability of Success — Target %",
+                "ru": "Априорная вероятность успеха — целевой %",
+                "sr": "Apriorni procenat uspešnosti — cilj %",
+            }.get(lang, "Prior Probability of Success (%)")
+
+            _prior_help = {
+                "en": ("Your initial confidence that the process will succeed "
+                       "before observing the rework data. "
+                       "The model updates this using the Bayesian likelihood ratio."),
+                "ru": ("Начальная уверенность в успехе процесса до анализа данных. "
+                       "Модель скорректирует её через коэффициент правдоподобия Байеса."),
+                "sr": ("Vaša početna uvernost pre analize podataka. "
+                       "Model je koriguje bayesovskim koeficijentom."),
+            }.get(lang, "")
+
+            _prior_pct = st.slider(
+                _prior_label,
+                min_value=10, max_value=99, value=85, step=1,
+                format="%d%%",
+                help=_prior_help,
+                key="clevel_prior_pct",
+            )
+
+            # ── Friction Tax computation ──────────────────────────────────────
+            _bt_node       = _mgr.bottleneck_node
+            _lat_days      = _mgr.decision_latency.get(_bt_node, 0.0)
+            # Fallback: use avg_days × rework_rate when no pure latency captured
+            if _lat_days <= 0.0:
+                _lat_days = _mgr.bottleneck_avg_days * _mgr.bottleneck_rework_rate
+
+            _friction_usd  = math_eng.compute_friction_tax(
+                decision_latency_days=_lat_days,
+                cost_per_hour=_cost_per_hour,
+                hours_per_day=_hours_per_day,
+            )
+
+            # ── Bayesian Posterior computation ────────────────────────────────
+            _conf = math_eng.compute_process_confidence(
+                prior_pct=float(_prior_pct),
+                bottleneck_rework_rate=_mgr.bottleneck_rework_rate,
+            )
+            _posterior_pct = _conf["posterior_pct"]
+            _delta_pct     = _conf["delta_pct"]
+            _lr            = _conf["likelihood_ratio"]
+
+            # ── C-Level metric cards ──────────────────────────────────────────
+            _lbl_bt  = {"en": "Bottleneck Stage",
+                        "ru": "Узкое место",
+                        "sr": "Usko grlo"}.get(lang, "Bottleneck Stage")
+            _lbl_ft  = {"en": "Friction Tax / Entity",
+                        "ru": "Налог на трение / ед.",
+                        "sr": "Porez trenja / entitet"}.get(lang, "Friction Tax")
+            _lbl_ac  = {"en": "Adjusted Confidence",
+                        "ru": "Скорр. уверенность",
+                        "sr": "Korigovana pouzdanost"}.get(lang, "Adjusted Confidence")
+
+            _delta_bt = {
+                "en": f"Rework rate {_mgr.bottleneck_rework_rate:.0%}  |  Score {_mgr.bottleneck_score:.3f}",
+                "ru": f"Доработок {_mgr.bottleneck_rework_rate:.0%}  |  Оценка {_mgr.bottleneck_score:.3f}",
+                "sr": f"Povrat {_mgr.bottleneck_rework_rate:.0%}  |  Ocena {_mgr.bottleneck_score:.3f}",
+            }.get(lang, "")
+
+            _delta_ft = {
+                "en": f"{_lat_days:.1f} latency days  ×  ${_cost_per_hour:.0f}/h  ×  {_hours_per_day:.0f} h/d",
+                "ru": f"{_lat_days:.1f} дн. задержки  ×  ${_cost_per_hour:.0f}/ч  ×  {_hours_per_day:.0f} ч/д",
+                "sr": f"{_lat_days:.1f} dana kašnjenja  ×  ${_cost_per_hour:.0f}/h  ×  {_hours_per_day:.0f} h/d",
+            }.get(lang, "")
+
+            _delta_ac_sign = f"{_delta_pct:+.1f}%" if _delta_pct != 0 else "—"
+            _delta_ac = {
+                "en": f"Prior {_prior_pct}%  →  LR {_lr:.2f}  →  {_delta_ac_sign}",
+                "ru": f"Апр. {_prior_pct}%  →  LR {_lr:.2f}  →  {_delta_ac_sign}",
+                "sr": f"Apriori {_prior_pct}%  →  LR {_lr:.2f}  →  {_delta_ac_sign}",
+            }.get(lang, "")
+
+            _col_bt, _col_ft, _col_ac = st.columns(3)
+            with _col_bt:
+                st.metric(
+                    label=_lbl_bt,
+                    value=_bt_node,
+                    delta=_delta_bt,
+                    delta_color="off",
+                )
+            with _col_ft:
+                st.metric(
+                    label=_lbl_ft,
+                    value=f"${_friction_usd:,.0f}",
+                    delta=_delta_ft,
+                    delta_color="inverse" if _friction_usd > 0 else "off",
+                )
+            with _col_ac:
+                st.metric(
+                    label=_lbl_ac,
+                    value=f"{_posterior_pct:.1f}%",
+                    delta=_delta_ac,
+                    delta_color="normal" if _delta_pct >= 0 else "inverse",
+                )
+
+            st.markdown("<hr style='border:none;border-top:1px solid #E5E5EA;margin:18px 0 22px;'>",
+                        unsafe_allow_html=True)
+
+            # ── Methodology note (expandable) ────────────────────────────────
+            _meth_label = {"en": "Methodology", "ru": "Методология",
+                           "sr": "Metodologija"}.get(lang, "Methodology")
+            with st.expander(_meth_label, expanded=False):
+                _meth_txt = {
+                    "en": (
+                        f"**Friction Tax** = Decision Latency × Cost/h × h/day\n\n"
+                        f"Decision Latency = average days spent in the bottleneck stage "
+                        f"(**{_bt_node}**) before a rework loop is triggered. "
+                        f"Computed as: `{_lat_days:.2f} d × ${_cost_per_hour:.0f}/h "
+                        f"× {_hours_per_day:.0f} h = ${_friction_usd:,.0f}`\n\n"
+                        f"**Adjusted Confidence** uses Bayesian odds-form update:\n\n"
+                        f"  1. Evidence = observed rework rate at bottleneck "
+                        f"({_mgr.bottleneck_rework_rate:.1%})\n"
+                        f"  2. P(evidence | success) = {1-_mgr.bottleneck_rework_rate:.2f} "
+                        f"(low rework in healthy process)\n"
+                        f"  3. P(evidence | failure) = {_mgr.bottleneck_rework_rate:.2f} "
+                        f"(high rework in broken process)\n"
+                        f"  4. Likelihood Ratio = {_lr:.4f}\n"
+                        f"  5. Posterior odds = Prior odds × LR → {_posterior_pct:.1f}%"
+                    ),
+                    "ru": (
+                        f"**Налог на трение** = Задержка × Стоимость/ч × Часов/день\n\n"
+                        f"Задержка решения = среднее число дней в стадии (**{_bt_node}**) "
+                        f"перед запуском петли доработки. "
+                        f"Расчёт: `{_lat_days:.2f} дн × ${_cost_per_hour:.0f}/ч "
+                        f"× {_hours_per_day:.0f} ч = ${_friction_usd:,.0f}`\n\n"
+                        f"**Скорр. уверенность** — байесовское обновление (форма шансов):\n\n"
+                        f"  1. Свидетельство = ставка доработки на узком месте "
+                        f"({_mgr.bottleneck_rework_rate:.1%})\n"
+                        f"  2. P(св | успех) = {1-_mgr.bottleneck_rework_rate:.2f}\n"
+                        f"  3. P(св | провал) = {_mgr.bottleneck_rework_rate:.2f}\n"
+                        f"  4. Коэф. правдоподобия (LR) = {_lr:.4f}\n"
+                        f"  5. Апостериорные шансы = априорные × LR → {_posterior_pct:.1f}%"
+                    ),
+                    "sr": (
+                        f"**Porez trenja** = Kašnjenje × Cena/h × h/dan\n\n"
+                        f"Kašnjenje odluke = prosečni dani u fazi (**{_bt_node}**) "
+                        f"pre povratne petlje. "
+                        f"Izračun: `{_lat_days:.2f} d × ${_cost_per_hour:.0f}/h "
+                        f"× {_hours_per_day:.0f} h = ${_friction_usd:,.0f}`\n\n"
+                        f"**Korigovana pouzdanost** — bayesovsko ažuriranje (u obliku šansi):\n\n"
+                        f"  1. Dokaz = stopa povrata na uskom grlu "
+                        f"({_mgr.bottleneck_rework_rate:.1%})\n"
+                        f"  2. P(dokaz | uspeh) = {1-_mgr.bottleneck_rework_rate:.2f}\n"
+                        f"  3. P(dokaz | neuspeh) = {_mgr.bottleneck_rework_rate:.2f}\n"
+                        f"  4. Koeficijent verodostojnosti (LR) = {_lr:.4f}\n"
+                        f"  5. Posteriorne šanse = apriorne × LR → {_posterior_pct:.1f}%"
+                    ),
+                }.get(lang, "")
+                st.markdown(_meth_txt)
+
+            # ── Spring layout (deterministic seed)
+            try:
+                import networkx as nx_local
+                _pos = nx_local.spring_layout(_G, k=2.2, seed=42, iterations=80)
+            except Exception:
+                _n_list = list(_G.nodes)
+                _ang = 2 * np.pi / max(len(_n_list), 1)
+                _pos = {n: (np.cos(i * _ang), np.sin(i * _ang)) for i, n in enumerate(_n_list)}
+
+            # ── Node classification ───────────────────────────────────────────
+            _bt_node   = _mgr.bottleneck_node
+            _rw_thresh = 0.30   # ≥30 % rework outgoing → orange warning node
+            _node_color_map, _node_size_map = {}, {}
+            _max_traffic = max(_mgr.stage_total.values()) if _mgr.stage_total else 1
+            for _nd in _G.nodes:
+                _traffic = _mgr.stage_total.get(_nd, 0)
+                _base_sz = 18 + 28 * (_traffic / _max_traffic)
+                _rr      = _mgr.rework_rate.get(_nd, 0.0)
+                if _nd == _bt_node:
+                    _node_color_map[_nd] = "#FF3B30"   # Apple red — bottleneck
+                    _node_size_map[_nd]  = max(_base_sz + 8, 42)
+                elif _rr >= _rw_thresh:
+                    _node_color_map[_nd] = "#FF9F0A"   # Apple orange — high rework
+                    _node_size_map[_nd]  = _base_sz + 4
+                else:
+                    _node_color_map[_nd] = "#0071E3"   # Apple blue — normal
+                    _node_size_map[_nd]  = _base_sz
+
+            # ── Edge traces (normal vs rework) ────────────────────────────────
+            _norm_ex, _norm_ey = [], []
+            _rw_ex,   _rw_ey   = [], []
+            _ann_list = []      # arrowhead annotations
+
+            _max_cnt = max(_mgr.transition_counts.values()) if _mgr.transition_counts else 1
+
+            for _frm, _to, _edata in _G.edges(data=True):
+                if _frm not in _pos or _to not in _pos:
+                    continue
+                _x0, _y0 = _pos[_frm]
+                _x1, _y1 = _pos[_to]
+
+                # Offset for bidirectional edges to avoid overlap
+                _is_bidi = _G.has_edge(_to, _frm)
+                if _is_bidi:
+                    _dx, _dy = (_y1 - _y0) * 0.08, -(_x1 - _x0) * 0.08
+                    _x0b, _y0b = _x0 + _dx, _y0 + _dy
+                    _x1b, _y1b = _x1 + _dx, _y1 + _dy
+                else:
+                    _x0b, _y0b, _x1b, _y1b = _x0, _y0, _x1, _y1
+
+                _prob  = _edata.get("weight", 0.0)
+                _cnt   = _edata.get("count", 0)
+                _is_rw = _edata.get("is_rework", False)
+                _lw    = 1.2 + 3.5 * (_cnt / _max_cnt)
+
+                if _is_rw:
+                    _rw_ex  += [_x0b, _x1b, None]
+                    _rw_ey  += [_y0b, _y1b, None]
+                else:
+                    _norm_ex += [_x0b, _x1b, None]
+                    _norm_ey += [_y0b, _y1b, None]
+
+                # Arrow annotation pointing to target node
+                _ann_list.append(dict(
+                    ax=_x0b, ay=_y0b, x=_x1b, y=_y1b,
+                    xref="x", yref="y", axref="x", ayref="y",
+                    showarrow=True,
+                    arrowhead=2, arrowsize=1.1,
+                    arrowwidth=_lw,
+                    arrowcolor="#FF3B30" if _is_rw else "rgba(0,113,227,0.55)",
+                    text=f"{_prob:.0%}", font=dict(size=9, color="#6E6E73"),
+                ))
+
+            # ── Plotly figure ─────────────────────────────────────────────────
+            _fig_mk = go.Figure()
+
+            # Normal edges
+            if _norm_ex:
+                _fig_mk.add_trace(go.Scatter(
+                    x=_norm_ex, y=_norm_ey, mode="lines",
+                    line=dict(color="rgba(0,113,227,0.28)", width=1.5),
+                    hoverinfo="none", name="Forward",
+                ))
+
+            # Rework edges
+            if _rw_ex:
+                _fig_mk.add_trace(go.Scatter(
+                    x=_rw_ex, y=_rw_ey, mode="lines",
+                    line=dict(color="rgba(255,59,48,0.45)", width=2.2, dash="dot"),
+                    hoverinfo="none", name="Rework loop",
+                ))
+
+            # Nodes
+            _all_nodes = list(_G.nodes)
+            _nx_arr  = [_pos[n][0] for n in _all_nodes]
+            _ny_arr  = [_pos[n][1] for n in _all_nodes]
+            _nc_arr  = [_node_color_map[n] for n in _all_nodes]
+            _ns_arr  = [_node_size_map[n]  for n in _all_nodes]
+            _bt_lbl  = {"en": "BOTTLENECK", "ru": "УЗКОЕ МЕСТО", "sr": "USKO GRLO"}.get(lang, "BOTTLENECK")
+            _rw_lbl  = {"en": "high rework", "ru": "высокий rework", "sr": "visok rework"}.get(lang, "high rework")
+            _hover_lines = []
+            for _nd in _all_nodes:
+                _rr  = _mgr.rework_rate.get(_nd, 0.0)
+                _bt  = _mgr.betweenness.get(_nd, 0.0)
+                _lat = _mgr.decision_latency.get(_nd, 0.0)
+                _tr  = _mgr.stage_total.get(_nd, 0)
+                _role = (f"<b>⚠ {_bt_lbl}</b>" if _nd == _bt_node
+                         else (f"⚡ {_rw_lbl.capitalize()}" if _rr >= _rw_thresh else ""))
+                _hover_lines.append(
+                    f"<b>{_nd}</b>{(' — ' + _role) if _role else ''}<br>"
+                    f"Transitions: {_tr}<br>"
+                    f"Rework rate: {_rr:.0%}<br>"
+                    f"Betweenness: {_bt:.4f}<br>"
+                    f"Decision latency: {_lat:.1f} d"
+                )
+
+            _fig_mk.add_trace(go.Scatter(
+                x=_nx_arr, y=_ny_arr,
+                mode="markers+text",
+                text=_all_nodes,
+                textposition="top center",
+                textfont=dict(family="Inter, sans-serif", size=11, color="#1D1D1F"),
+                marker=dict(
+                    color=_nc_arr, size=_ns_arr,
+                    line=dict(color="rgba(255,255,255,0.9)", width=2.5),
+                    symbol="circle",
+                ),
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=_hover_lines,
+                name="Stages",
+            ))
+
+            _no_axes = {k: v for k, v in CHART_LAYOUT.items() if k not in ("xaxis", "yaxis")}
+            _fig_mk.update_layout(
+                annotations=_ann_list,
+                showlegend=True,
+                legend=dict(orientation="h", y=-0.07, x=0.5, xanchor="center",
+                            font=dict(size=11, color="#6E6E73")),
+                height=520,
+                xaxis=dict(visible=False, range=[-1.6, 1.6]),
+                yaxis=dict(visible=False, range=[-1.6, 1.6]),
+                **_no_axes,
+            )
+            st.plotly_chart(_fig_mk, width="stretch", key="markov_graph_plotly")
+
+            # ── Legend chips ──────────────────────────────────────────────────
+            _lc1, _lc2, _lc3 = st.columns(3)
+            with _lc1:
+                st.markdown(
+                    '<div style="display:flex;align-items:center;gap:8px;">'
+                    '<div style="width:14px;height:14px;border-radius:50%;background:#FF3B30;flex-shrink:0;"></div>'
+                    f'<span style="font-size:12px;color:#6E6E73;">{_bt_lbl} — {_bt_node}</span></div>',
+                    unsafe_allow_html=True,
+                )
+            with _lc2:
+                st.markdown(
+                    '<div style="display:flex;align-items:center;gap:8px;">'
+                    '<div style="width:14px;height:14px;border-radius:50%;background:#FF9F0A;flex-shrink:0;"></div>'
+                    f'<span style="font-size:12px;color:#6E6E73;">{_rw_lbl.capitalize()} (&ge;30%)</span></div>',
+                    unsafe_allow_html=True,
+                )
+            with _lc3:
+                st.markdown(
+                    '<div style="display:flex;align-items:center;gap:8px;">'
+                    '<div style="width:14px;height:14px;border-radius:2px;background:rgba(255,59,48,0.45);flex-shrink:0;"></div>'
+                    f'<span style="font-size:12px;color:#6E6E73;">Rework edge (dotted)</span></div>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── Bottleneck alert ──────────────────────────────────────────────
+            _bt_days_label = {"en": "avg days in stage",
+                              "ru": "ср. дней в стадии",
+                              "sr": "prosek dana u fazi"}.get(lang, "avg days in stage")
+            _rw_label = {"en": "rework rate",
+                         "ru": "процент доработки",
+                         "sr": "stopa dorade"}.get(lang, "rework rate")
+
+            _bt_days = _mgr.bottleneck_avg_days
+            _bt_rr   = _mgr.bottleneck_rework_rate
+
+            if _bt_rr >= 0.3 or _bt_days >= 5:
+                _msg_bt = {
+                    "en": (f"**Bottleneck detected:** stage **{_bt_node}** "
+                           f"has a {_bt_rr:.0%} {_rw_label} "
+                           f"and tasks spend on average **{_bt_days:.1f} days** here "
+                           f"before looping back."),
+                    "ru": (f"**Узкое место обнаружено:** стадия **{_bt_node}** "
+                           f"имеет {_bt_rr:.0%} доработок; "
+                           f"задачи проводят здесь в среднем **{_bt_days:.1f} дн.** "
+                           f"перед возвратом."),
+                    "sr": (f"**Usko grlo detektovano:** faza **{_bt_node}** "
+                           f"ima {_bt_rr:.0%} povratnih prelaza; "
+                           f"zadaci provode prosečno **{_bt_days:.1f} dana** ovde "
+                           f"pre povratka."),
+                }.get(lang, f"Bottleneck: {_bt_node} | rework {_bt_rr:.0%} | {_bt_days:.1f} days")
+                st.error(_msg_bt)
+            else:
+                _msg_bt_ok = {
+                    "en": (f"**Primary focus stage: {_bt_node}** — "
+                           f"{_bt_rr:.0%} {_rw_label}, "
+                           f"{_bt_days:.1f} {_bt_days_label}. "
+                           f"No critical bottleneck detected."),
+                    "ru": (f"**Приоритетная стадия: {_bt_node}** — "
+                           f"{_bt_rr:.0%} доработок, "
+                           f"{_bt_days:.1f} {_bt_days_label}. "
+                           f"Критических узких мест не обнаружено."),
+                    "sr": (f"**Prioritetna faza: {_bt_node}** — "
+                           f"{_bt_rr:.0%} {_rw_label}, "
+                           f"{_bt_days:.1f} {_bt_days_label}. "
+                           f"Nije detektovano kritično usko grlo."),
+                }.get(lang, f"Focus: {_bt_node} | {_bt_rr:.0%} rework | {_bt_days:.1f} days")
+                st.warning(_msg_bt_ok)
+
+            # ── Rework pairs table ────────────────────────────────────────────
+            if _mgr.rework_pairs:
+                _rw_hdr = {"en": "Detected Rework Loops",
+                           "ru": "Обнаруженные петли доработки",
+                           "sr": "Detektovane petlje dorade"}.get(lang, "Rework Loops")
+                st.subheader(_rw_hdr)
+
+                _col_a  = {"en": "Stage A", "ru": "Стадия A", "sr": "Faza A"}.get(lang, "Stage A")
+                _col_b  = {"en": "Stage B", "ru": "Стадия B", "sr": "Faza B"}.get(lang, "Stage B")
+                _col_p1 = {"en": "P(A→B)", "ru": "P(A→B)", "sr": "P(A→B)"}[lang]
+                _col_p2 = {"en": "P(B→A rework)", "ru": "P(B→A доработка)", "sr": "P(B→A povratak)"}[lang]
+                _col_d  = {"en": "Decision Latency (days)", "ru": "Задержка решения (дн.)", "sr": "Kašnjenje odluke (dana)"}.get(lang, "Decision Latency (d)")
+                _col_n  = {"en": "# Rework Events", "ru": "Кол-во возвратов", "sr": "Br. povrata"}.get(lang, "# Events")
+
+                _rw_rows = [
+                    {
+                        _col_a: rp.stage_a,
+                        _col_b: rp.stage_b,
+                        _col_p1: f"{rp.prob_a_to_b:.1%}",
+                        _col_p2: f"{rp.prob_b_to_a:.1%}",
+                        _col_d: rp.avg_days_in_b,
+                        _col_n: rp.count_rework,
+                    }
+                    for rp in _mgr.rework_pairs
+                ]
+                _df_rw = pd.DataFrame(_rw_rows)
+                st.dataframe(
+                    _df_rw.style.background_gradient(subset=[_col_d], cmap="Reds"),
+                    height=min(60 + 38 * len(_rw_rows), 340),
+                )
+
+                _total_rw_label = {
+                    "en": f"Total rework transitions in dataset: **{_mgr.total_rework_transitions}** of {_mgr.total_transitions} ({_mgr.total_rework_transitions / max(_mgr.total_transitions, 1):.1%})",
+                    "ru": f"Всего переходов-доработок в данных: **{_mgr.total_rework_transitions}** из {_mgr.total_transitions} ({_mgr.total_rework_transitions / max(_mgr.total_transitions, 1):.1%})",
+                    "sr": f"Ukupno povratnih prelaza: **{_mgr.total_rework_transitions}** od {_mgr.total_transitions} ({_mgr.total_rework_transitions / max(_mgr.total_transitions, 1):.1%})",
+                }.get(lang, "")
+                st.caption(_total_rw_label)
+
+            # ── Transition probability matrix (expandable) ────────────────────
+            _tp_hdr = {"en": "Transition Probability Matrix",
+                       "ru": "Матрица переходных вероятностей",
+                       "sr": "Matrica verovatnoća prelaza"}.get(lang, "Transition Matrix")
+            with st.expander(_tp_hdr, expanded=False):
+                _all_stages_tp = set(_G.nodes) if _G else set()
+                _stages_sorted = sorted(_all_stages_tp)
+                _tp_data = {}
+                for _s in _stages_sorted:
+                    _row = {}
+                    for _t in _stages_sorted:
+                        _p = _mgr.transition_probs.get((_s, _t), 0.0)
+                        _row[_t] = _p
+                    _tp_data[_s] = _row
+                _df_tp = pd.DataFrame(_tp_data).T.fillna(0.0)
+                if not _df_tp.empty:
+                    st.dataframe(
+                        _df_tp.style.background_gradient(cmap="Blues").format("{:.2%}"),
+                        height=min(80 + 38 * len(_stages_sorted), 400),
+                    )
 
     # ── TAB 3: MARKOV ─────────────────────────────────────────────────────────
     with tab3:
