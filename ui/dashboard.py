@@ -413,30 +413,6 @@ def run_dashboard():
             st.session_state["presentation_mode"] = not st.session_state["presentation_mode"]
             st.rerun()
 
-        # Demo presets
-        _demo_labels = {
-            "en": ("Demo cases", "Run live audit"),
-            "ru": ("Демо-кейсы", "Живой аудит"),
-            "sr": ("Demo slučajevi", "Živi audit"),
-        }
-        st.markdown(
-            f'<div style="font-size:11px;font-weight:600;color:#AEAEB2;'
-            f'letter-spacing:0.08em;text-transform:uppercase;margin:8px 0 6px;">'
-            f'{_demo_labels[lang][0]}</div>',
-            unsafe_allow_html=True,
-        )
-        _active = st.session_state.get("demo_preset")
-        _dc1, _dc2, _dc3 = st.columns(3)
-        if _dc1.button(DEMO_PRESETS["logistics"]["labels"][lang], key="btn_logistics", use_container_width=True):
-            _apply_preset("logistics"); st.rerun()
-        if _dc2.button(DEMO_PRESETS["agency"]["labels"][lang], key="btn_agency", use_container_width=True):
-            _apply_preset("agency"); st.rerun()
-        if _dc3.button(DEMO_PRESETS["retail"]["labels"][lang], key="btn_retail", use_container_width=True):
-            _apply_preset("retail"); st.rerun()
-        if _active:
-            if st.button(_demo_labels[lang][1], key="btn_live", use_container_width=True):
-                _clear_demo(); st.rerun()
-
         st.markdown("---")
 
         # Scenario confidence (2)
@@ -490,124 +466,8 @@ def run_dashboard():
         st.session_state.setdefault("company_name", "Marteco Digital Services")
         company_name = st.text_input(t(lang, "company_label"), key="company_name")
 
-        if is_demo:
-            _lock_csv = {
-                "en": "Sign in to upload your own CSV data",
-                "ru": "Войдите, чтобы загрузить свои CSV-данные",
-                "sr": "Prijavite se da učitate sopstvene CSV podatke",
-            }
-            st.info(_lock_csv[lang])
-            _sample_label = {"en": "Download sample CSV", "ru": "Скачать пример CSV", "sr": "Preuzmi primer CSV"}
-            try:
-                with open("data/mock_client_data.csv", "rb") as _sf:
-                    st.download_button(
-                        label=_sample_label[lang],
-                        data=_sf.read(),
-                        file_name="sample_audit_data.csv",
-                        mime="text/csv",
-                        key="dl_sample_csv",
-                        use_container_width=True,
-                    )
-            except Exception:
-                pass
-            csv_file = None
-        else:
-            csv_file = st.file_uploader(
-                t(lang, "csv_label"), type=["csv"], help=t(lang, "csv_help"), key="csv_file"
-            )
-
-        # ── Pre-scan CSV BEFORE sliders are rendered ──────────────────────────
-        # Streamlit rule: session_state keys bound to widgets cannot be set
-        # after the widget is instantiated. So we read the CSV here — before
-        # any slider is rendered — and write derived values into session state.
-        if csv_file is not None:
-            _pre_fname = getattr(csv_file, "name", "") or ""
-            _pre_fsize = str(getattr(csv_file, "size", 0))
-            _pre_key   = f"_csv_prescan:{_pre_fname}:{_pre_fsize}"
-            if st.session_state.get("_csv_prescan_key") != _pre_key:
-                try:
-                    _pre_log = MatrixExtractor().from_csv(csv_file)
-                    if _pre_log.total_deals > 0:
-                        st.session_state["_csv_prescan_key"] = _pre_key
-                        if _pre_log.avg_cycle_days > 0:
-                            st.session_state["cycle_before"] = max(
-                                1, int(round(_pre_log.avg_cycle_days))
-                            )
-                        st.session_state["volume"] = max(10, _pre_log.total_deals)
-                        st.session_state["pos_signals"] = max(
-                            1, min(_pre_log.clean_completions, _pre_log.total_deals)
-                        )
-                        st.session_state["tot_signals"] = max(2, _pre_log.total_deals)
-                except Exception:
-                    pass
-
-        _slider_defaults = {
-            "manual_hours": 320, "automation_rate": 86, "hour_rate": 12,
-            "error_before": 8.5, "error_after": 1.2, "cost_per_error": 95, "volume": 600,
-            "cycle_before": 21, "cycle_after": 9, "deals_month": 25, "deal_value": 700,
-            "p_before": 74, "p_after": 96, "impl_cost": 14000, "pipeline_util": 30,
-        }
-        for _k, _v in _slider_defaults.items():
-            st.session_state.setdefault(_k, _v)
-
-        st.markdown("---")
-
-        with st.expander("💼 " + t(lang, "labor_section").strip("*"), expanded=True):
-            manual_hours    = st.slider(t(lang, "manual_hours"),    1, 600,      key="manual_hours",
-                                        help=t(lang, "help_manual_hours"))
-            automation_rate = st.slider(t(lang, "automation_pct"),  1,  95,      key="automation_rate",
-                                        help=t(lang, "help_automation_pct"))
-            hour_rate       = st.slider(t(lang, "hour_rate"),        1,  30,      key="hour_rate",
-                                        help=t(lang, "help_hour_rate"))
-
-        with st.expander("⚠️ " + t(lang, "errors_section").strip("*"), expanded=False):
-            error_before   = st.slider(t(lang, "error_before"),  0.1, 20.0, step=0.1, key="error_before",
-                                       help=t(lang, "help_error_before"))
-            error_after    = st.slider(t(lang, "error_after"),   0.1,  5.0, step=0.1, key="error_after",
-                                       help=t(lang, "help_error_after"))
-            if error_after >= error_before:
-                st.warning(t(lang, "val_error_rate"))
-            cost_per_error = st.slider(t(lang, "cost_per_error"),  1, 500,       key="cost_per_error",
-                                       help=t(lang, "help_cost_per_error"))
-            volume         = st.slider(t(lang, "volume"),           1, 2000,      key="volume",
-                                       help=t(lang, "help_volume"))
-
-        with st.expander("🔄 " + t(lang, "cycle_section").strip("*"), expanded=False):
-            cycle_before = st.slider(t(lang, "cycle_before"),  1,  60,           key="cycle_before",
-                                     help=t(lang, "help_cycle_before"))
-            cycle_after  = st.slider(t(lang, "cycle_after"),   1,  30,           key="cycle_after",
-                                     help=t(lang, "help_cycle_after"))
-            if cycle_after >= cycle_before:
-                st.warning(t(lang, "val_cycle"))
-            deals      = st.slider(t(lang, "deals_month"),     1, 200,           key="deals_month",
-                                   help=t(lang, "help_deals_month"))
-            deal_value = st.number_input(t(lang, "deal_value"), min_value=1, max_value=50000,
-                                         step=100, key="deal_value",
-                                         help=t(lang, "help_deal_value"))
-
-        with st.expander("📐 " + t(lang, "proba_section").strip("*"), expanded=False):
-            p_before = st.slider(t(lang, "p_before"),  1, 95, key="p_before",
-                                 help=t(lang, "help_p_before"))
-            p_after  = st.slider(t(lang, "p_after"),   1, 99, key="p_after",
-                                 help=t(lang, "help_p_after"))
-            if p_after < p_before:
-                st.warning(t(lang, "val_p_complete"))
-
-        _input_note = {
-            "en": "ℹ️ Inputs in EUR. Currency selector converts outputs only.",
-            "ru": "ℹ️ Входные данные в EUR. Валюта меняет только вывод.",
-            "sr": "ℹ️ Ulazne vrednosti u EUR. Valuta menja samo prikaz.",
-        }
-        st.caption(_input_note.get(lang, _input_note["en"]))
-
-        with st.expander("💰 " + t(lang, "invest_section").strip("*"), expanded=False):
-            impl_cost = st.number_input(t(lang, "impl_cost"), min_value=1000, max_value=500000,
-                                        step=1000, key="impl_cost",
-                                        help=t(lang, "help_impl_cost"))
-            pipeline_util = st.slider(
-                t(lang, "pipeline_util"), 10, 60, key="pipeline_util",
-                help=t(lang, "pipeline_util_help"),
-            )
+        # CSV upload is now in the main area — no sliders in sidebar
+        csv_file = None
 
         st.markdown("---")
 
@@ -640,12 +500,75 @@ def run_dashboard():
         st.markdown("---")
         st.caption(t(lang, "footer"))
 
-    # ── COMPUTE ────────────────────────────────────────────────────────────────
-    # Safety fallback: always read currency from session state directly
+    # ── CURRENCY (always read from session state) ──────────────────────────────
     currency = st.session_state.get("currency_select", "EUR")
 
     math_eng = MathEngine()
     roi_eng  = ROIEngine()
+
+    # ── DERIVE ROI PARAMETERS from mapped DataFrame or use defaults ────────────
+    # All computation is data-driven: CSV upload → column mapping → derived params.
+    # When no data is loaded we fall back to neutral demonstration defaults.
+    _mapped_df = st.session_state.get("mapped_df")
+
+    # Financial inputs (stored by the ETL section below; read here for compute)
+    _cost_per_hour = float(st.session_state.get("fin_cost_per_hour", 12.0))
+    _hours_per_day = float(st.session_state.get("fin_hours_per_day", 8.0))
+
+    # Absorbing-state keywords (multi-language)
+    _ABSORBING_KW = {
+        "done", "completed", "won", "closed", "delivered", "shipped",
+        "approved", "deployed", "production", "complete", "finished",
+        "завершена", "выполнено", "продано", "закрыта", "доставлено",
+        "završeno", "zatvoreno", "isporučeno",
+    }
+
+    if _mapped_df is not None and len(_mapped_df) > 0:
+        # ── Derive cycle time per entity ────────────────────────────────────
+        _entity_times = _mapped_df.groupby("entity_id")["time_spent"].sum()
+        _unique_ent   = max(1, _mapped_df["entity_id"].nunique())
+        _avg_cycle    = max(1.0, float(_entity_times.mean()))
+
+        # ── Derive volume & deal cadence ────────────────────────────────────
+        # Assume dataset represents ~3 months of activity (conservative)
+        volume      = max(10, _unique_ent)
+        cycle_before = round(_avg_cycle)
+        cycle_after  = max(1, round(cycle_before * 0.45))
+        deals_month  = max(1, int(volume / 3))
+
+        # ── Derive manual hours from time spent * working hours per day ─────
+        manual_hours = max(1.0, _avg_cycle * _hours_per_day * deals_month / 30.0)
+        hour_rate    = _cost_per_hour
+
+        # ── Estimate completion probability from absorbing states ───────────
+        _next_lower  = _mapped_df["next_stage"].astype(str).str.lower().str.strip()
+        _completed   = _mapped_df[_next_lower.isin(_ABSORBING_KW)]["entity_id"].nunique()
+        p_before     = max(30, min(95, int(_completed / _unique_ent * 100)))
+        p_after      = min(99, int(p_before * 1.28))
+
+        pos_signals  = max(1, min(_completed, _unique_ent))
+        tot_signals  = max(2, _unique_ent)
+    else:
+        # ── Neutral demonstration defaults (no CSV loaded) ──────────────────
+        volume, cycle_before, cycle_after = 600, 21, 9
+        deals_month, manual_hours         = 25, 320
+        hour_rate                         = _cost_per_hour
+        p_before, p_after                 = 74, 96
+        pos_signals, tot_signals          = 4, 5
+
+    # Constants not derivable from process-log data — sensible industry defaults
+    automation_rate = 80
+    error_before    = 8.5
+    error_after     = 1.2
+    cost_per_error  = 95
+    deal_value      = 1000
+    impl_cost       = 15000
+    pipeline_util   = 30
+    deals           = deals_month
+
+    # Seed Bayesian tab sliders with derived values (setdefault = only on first run)
+    st.session_state.setdefault("pos_signals", pos_signals)
+    st.session_state.setdefault("tot_signals", tot_signals)
 
     inp = ROIInput(
         company_name=company_name,
@@ -663,8 +586,8 @@ def run_dashboard():
         p_complete_before=p_before / 100.0,
         p_complete_after=p_after / 100.0,
         implementation_cost_eur=float(impl_cost),
-        positive_signals=4,
-        total_signals=5,
+        positive_signals=int(pos_signals),
+        total_signals=int(tot_signals),
         pipeline_utilization_pct=float(pipeline_util),
     )
 
@@ -744,14 +667,12 @@ def run_dashboard():
         markov_res = None
         N_mat = None
 
-    # ── Benchmarks ─────────────────────────────────────────────────────────────
-    _preset_key = st.session_state.get("demo_preset")
-    _bench = _BENCHMARKS.get(_preset_key, _BENCHMARKS[None])
+    # ── Benchmarks (generic — no industry preset) ──────────────────────────────
+    _bench = _BENCHMARKS[None]
     _bench_roi_eur = impl_cost * _bench["net_roi_mult"]
 
     # ── HEADER ─────────────────────────────────────────────────────────────────
     if st.session_state.get("presentation_mode"):
-        # Presentation mode: clean exit button
         if st.button(t(lang, "presentation_off"), key="pres_exit_top"):
             st.session_state["presentation_mode"] = False
             st.rerun()
@@ -769,28 +690,217 @@ def run_dashboard():
         unsafe_allow_html=True,
     )
 
-    # Demo banner
-    _active_preset = st.session_state.get("demo_preset")
-    if _active_preset and _active_preset in DEMO_PRESETS:
-        _p_data = DEMO_PRESETS[_active_preset]
-        _b_title, _b_desc_tpl, _b_hint = _DEMO_BANNER[lang]
-        _b_desc = _p_data["desc"].get(lang, _p_data["desc"]["ru"])
-        _label  = _p_data["labels"][lang]
+    # ── ETL: DATA UPLOAD & COLUMN MAPPING ──────────────────────────────────────
+    # Localized labels for the ETL section
+    _etl_lbl = {
+        "en": {
+            "section":    "Data Upload",
+            "cost_label": "Cost per hour of team work ($)",
+            "hours_label":"Average working hours per day",
+            "upload_label": "Upload process data (.csv)",
+            "col_entity":  "Column for Entity ID (Task_ID, Deal_ID, …)",
+            "col_current": "Column for Current Stage",
+            "col_next":    "Column for Next Stage",
+            "col_time":    "Column for Time Spent (Days)",
+            "preview":     "Data preview",
+            "no_data":     "Upload a CSV file to begin. The engine will derive all ROI parameters automatically.",
+            "data_ok":     "Data loaded",
+            "lock":        "Sign in to upload your own CSV data",
+            "sample":      "Download sample CSV",
+        },
+        "ru": {
+            "section":    "Загрузка данных",
+            "cost_label": "Стоимость часа работы команды ($)",
+            "hours_label":"Рабочих часов в день (среднее)",
+            "upload_label": "Загрузите файл процессных данных (.csv)",
+            "col_entity":  "Колонка — ID сущности (Task_ID, Deal_ID, …)",
+            "col_current": "Колонка — Текущий этап",
+            "col_next":    "Колонка — Следующий этап",
+            "col_time":    "Колонка — Время на этапе (дней)",
+            "preview":     "Предпросмотр данных",
+            "no_data":     "Загрузите CSV-файл, чтобы начать. Движок автоматически вычислит все ROI-параметры.",
+            "data_ok":     "Данные загружены",
+            "lock":        "Войдите, чтобы загрузить свои CSV-данные",
+            "sample":      "Скачать пример CSV",
+        },
+        "sr": {
+            "section":    "Učitavanje podataka",
+            "cost_label": "Trošak sata rada tima ($)",
+            "hours_label":"Prosečni radni sati po danu",
+            "upload_label": "Učitajte procesne podatke (.csv)",
+            "col_entity":  "Kolona za ID entiteta (Task_ID, Deal_ID, …)",
+            "col_current": "Kolona za trenutnu fazu",
+            "col_next":    "Kolona za sledeću fazu",
+            "col_time":    "Kolona za vreme (dani)",
+            "preview":     "Pregled podataka",
+            "no_data":     "Učitajte CSV fajl da biste počeli. Motor će automatski izračunati ROI parametre.",
+            "data_ok":     "Podaci učitani",
+            "lock":        "Prijavite se da biste učitali sopstvene CSV podatke",
+            "sample":      "Preuzmi primer CSV",
+        },
+    }
+    _el = _etl_lbl.get(lang, _etl_lbl["en"])
+
+    with st.container():
         st.markdown(
-            f'<div style="display:flex;align-items:center;gap:12px;'
-            f'background:linear-gradient(135deg,rgba(0,113,227,0.07) 0%,rgba(52,199,89,0.06) 100%);'
-            f'border:1px solid rgba(0,113,227,0.18);border-radius:16px;'
-            f'padding:12px 18px;margin-bottom:16px;">'
-            f'<div style="background:#0071E3;color:#fff;font-size:11px;font-weight:700;'
-            f'letter-spacing:0.06em;padding:3px 10px;border-radius:980px;white-space:nowrap;">DEMO</div>'
-            f'<div>'
-            f'<div style="font-size:14px;font-weight:600;color:#0071E3;">{_label} — {_b_desc}</div>'
-            f'<div style="font-size:12px;color:#AEAEB2;margin-top:2px;">{_b_hint}</div>'
-            f'</div></div>',
+            f'<div style="font-size:11px;font-weight:600;color:#AEAEB2;'
+            f'letter-spacing:0.08em;text-transform:uppercase;margin:0 0 10px;">'
+            f'{_el["section"]}</div>',
             unsafe_allow_html=True,
         )
 
-    # ── Scenario badge (2) ──────────────────────────────────────────────────────
+        # ── Financial inputs (always visible) ────────────────────────────────
+        st.session_state.setdefault("fin_cost_per_hour", 12.0)
+        st.session_state.setdefault("fin_hours_per_day", 8.0)
+        _fin1, _fin2, _fin_pad = st.columns([2, 2, 5])
+        _fin1.number_input(
+            _el["cost_label"], min_value=1.0, max_value=999.0,
+            step=1.0, format="%.0f", key="fin_cost_per_hour",
+        )
+        _fin2.number_input(
+            _el["hours_label"], min_value=1.0, max_value=24.0,
+            step=0.5, format="%.1f", key="fin_hours_per_day",
+        )
+
+        # ── File uploader ─────────────────────────────────────────────────────
+        if is_demo:
+            st.info(_el["lock"])
+            try:
+                with open("data/mock_client_data.csv", "rb") as _sf:
+                    st.download_button(
+                        _el["sample"], _sf.read(),
+                        file_name="sample_audit_data.csv", mime="text/csv",
+                        key="dl_sample_etl",
+                    )
+            except Exception:
+                pass
+            _etl_file = None
+        else:
+            _etl_file = st.file_uploader(
+                _el["upload_label"], type=["csv"], key="etl_csv_file",
+            )
+
+        if _etl_file is not None:
+            # ── Detect new file to reset column-mapping dropdowns ─────────────
+            _etl_fname = getattr(_etl_file, "name", "")
+            _etl_fsize = getattr(_etl_file, "size", 0)
+            _etl_fkey  = f"{_etl_fname}:{_etl_fsize}"
+            if st.session_state.get("_etl_fkey") != _etl_fkey:
+                st.session_state["_etl_fkey"] = _etl_fkey
+                for _k in ("_etl_idx_entity", "_etl_idx_current",
+                           "_etl_idx_next", "_etl_idx_time"):
+                    st.session_state.pop(_k, None)
+
+            # ── Read CSV (multi-encoding fallback) ────────────────────────────
+            _raw_df = None
+            for _enc in ("utf-8", "cp1251", "latin-1"):
+                try:
+                    _etl_file.seek(0)
+                    _raw_df = pd.read_csv(_etl_file, encoding=_enc)
+                    break
+                except Exception:
+                    continue
+            if _raw_df is None:
+                st.error("Could not parse CSV — try saving as UTF-8.")
+            else:
+                _cols = list(_raw_df.columns)
+
+                # ── Smart auto-detect default columns ─────────────────────────
+                def _best_idx(hints: list, cols: list) -> int:
+                    for h in hints:
+                        for i, c in enumerate(cols):
+                            if h.lower() in c.lower():
+                                return i
+                    return 0
+
+                st.session_state.setdefault(
+                    "_etl_idx_entity",
+                    _best_idx(["entity_id","id","deal","task","project","client"], _cols),
+                )
+                st.session_state.setdefault(
+                    "_etl_idx_current",
+                    _best_idx(["current","from","stage","phase","status","cur"], _cols),
+                )
+                st.session_state.setdefault(
+                    "_etl_idx_next",
+                    _best_idx(["next","to","target","dest"], _cols),
+                )
+                st.session_state.setdefault(
+                    "_etl_idx_time",
+                    _best_idx(["time","days","duration","spent","hours"], _cols),
+                )
+
+                # ── 4 side-by-side selectboxes for column mapping ─────────────
+                _sm1, _sm2, _sm3, _sm4 = st.columns(4)
+                col_entity  = _sm1.selectbox(
+                    _el["col_entity"],  _cols,
+                    index=min(st.session_state["_etl_idx_entity"],  len(_cols)-1),
+                    key="_etl_sel_entity",
+                )
+                col_current = _sm2.selectbox(
+                    _el["col_current"], _cols,
+                    index=min(st.session_state["_etl_idx_current"], len(_cols)-1),
+                    key="_etl_sel_current",
+                )
+                col_next    = _sm3.selectbox(
+                    _el["col_next"],    _cols,
+                    index=min(st.session_state["_etl_idx_next"],    len(_cols)-1),
+                    key="_etl_sel_next",
+                )
+                col_time    = _sm4.selectbox(
+                    _el["col_time"],    _cols,
+                    index=min(st.session_state["_etl_idx_time"],    len(_cols)-1),
+                    key="_etl_sel_time",
+                )
+
+                # ── Normalize: rename mapped columns to internal standard names ─
+                _mapped = _raw_df[[col_entity, col_current,
+                                   col_next, col_time]].copy()
+                _mapped.columns = ["entity_id", "current_stage",
+                                   "next_stage", "time_spent"]
+                _mapped["time_spent"] = (
+                    pd.to_numeric(_mapped["time_spent"], errors="coerce").fillna(0)
+                )
+                _mapped["entity_id"] = _mapped["entity_id"].astype(str).str.strip()
+                _mapped = _mapped[_mapped["time_spent"] >= 0].reset_index(drop=True)
+
+                # ── Persist to session_state for the compute block above ───────
+                st.session_state["mapped_df"]   = _mapped
+                st.session_state["col_mapping"] = {
+                    "entity_id":    col_entity,
+                    "current_stage": col_current,
+                    "next_stage":   col_next,
+                    "time_spent":   col_time,
+                }
+
+                # ── Data summary badge ─────────────────────────────────────────
+                _n_ent = _mapped["entity_id"].nunique()
+                _n_row = len(_mapped)
+                _n_stg = _mapped["current_stage"].nunique()
+                st.markdown(
+                    f'<div style="display:flex;gap:12px;align-items:center;'
+                    f'margin:8px 0 4px;flex-wrap:wrap;">'
+                    f'<span style="background:#34C75914;border:1px solid #34C75944;'
+                    f'border-radius:980px;padding:3px 12px;font-size:12px;'
+                    f'font-weight:600;color:#34C759;">'
+                    f'✓ {_el["data_ok"]}</span>'
+                    f'<span style="font-size:12px;color:#AEAEB2;">'
+                    f'{_n_row:,} rows · {_n_ent:,} entities · {_n_stg} stages</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # ── Collapsible data preview ───────────────────────────────────
+                with st.expander(f"📋 {_el['preview']} ({_n_row:,} rows)", expanded=False):
+                    st.dataframe(_mapped.head(30), use_container_width=True)
+
+        elif st.session_state.get("mapped_df") is None:
+            # No file and no cached data — show upload prompt
+            st.info(_el["no_data"])
+
+    st.markdown("---")
+
+    # ── Scenario badge ──────────────────────────────────────────────────────────
     _conf_val = st.session_state.get("scenario_confidence", 0.75)
     _conf_badge = {
         0.50: {"en": "Pessimistic · 50%", "ru": "Пессимистичный · 50%", "sr": "Pesimistički · 50%", "color": "#FF9F0A"},
@@ -806,7 +916,7 @@ def run_dashboard():
         unsafe_allow_html=True,
     )
 
-    # ── KPI cards with benchmark delta (6) ─────────────────────────────────────
+    # ── KPI cards with benchmark delta ─────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
     _roi_delta = res.net_roi - _bench_roi_eur
     _pay_delta = _bench["payback"] - res.payback_months
