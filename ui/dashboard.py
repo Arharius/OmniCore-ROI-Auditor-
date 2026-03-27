@@ -1,5 +1,6 @@
 import sys
 import os
+import io
 import json
 from datetime import datetime
 
@@ -27,6 +28,60 @@ from core.advanced_analytics import run_monte_carlo, run_tornado, compute_npv_ir
 from etl.extractor import MatrixExtractor
 from exports.pdf_generator import build_roi_passport_pdf
 from ui.i18n import TRANSLATIONS, LANG_NAMES, t
+
+
+# ── Robust CSV loader (handles garbage rows before real header) ────────────────
+def load_cleaned_csv(uploaded_file) -> "pd.DataFrame | None":
+    """
+    Read a CSV that may contain export artefacts, metadata or empty rows
+    above the real header row.
+
+    Algorithm:
+      1. Decode the file with UTF-8 → cp1251 → latin-1 fallback.
+      2. Split into lines and scan top-down for the first line that:
+           - contains at least 3 commas  (multi-column row)
+           - contains at least one alphanumeric character
+         That line is treated as the true header.
+      3. Everything above is discarded.
+      4. The remaining text is parsed with pd.read_csv via StringIO.
+      5. Columns whose name contains 'Unnamed' are dropped (trailing-comma
+         artefact from Excel exports).
+    """
+    raw_bytes = uploaded_file.read()
+    text: str | None = None
+    for enc in ("utf-8-sig", "utf-8", "cp1251", "latin-1"):
+        try:
+            text = raw_bytes.decode(enc)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+    if text is None:
+        return None
+
+    lines = text.splitlines()
+    header_idx: int | None = None
+    for i, line in enumerate(lines):
+        comma_count = line.count(",")
+        has_alnum   = any(ch.isalnum() for ch in line)
+        if comma_count >= 3 and has_alnum:
+            header_idx = i
+            break
+
+    if header_idx is None:
+        return None
+
+    clean_text = "\n".join(lines[header_idx:])
+    try:
+        df = pd.read_csv(io.StringIO(clean_text))
+    except Exception:
+        return None
+
+    # Drop Unnamed columns (leading/trailing commas in source)
+    unnamed_cols = [c for c in df.columns if "Unnamed" in str(c)]
+    if unnamed_cols:
+        df = df.drop(columns=unnamed_cols)
+
+    return df if not df.empty else None
 
 
 # ── Cached Monte Carlo (Sprint 3) ──────────────────────────────────────────────
@@ -778,21 +833,20 @@ def run_dashboard():
             _etl_fkey  = f"{_etl_fname}:{_etl_fsize}"
             if st.session_state.get("_etl_fkey") != _etl_fkey:
                 st.session_state["_etl_fkey"] = _etl_fkey
+                # Clear column-mapping dropdowns AND any previously mapped data
+                # so a new upload never shows stale results from the old file.
                 for _k in ("_etl_idx_entity", "_etl_idx_current",
-                           "_etl_idx_next", "_etl_idx_time"):
+                           "_etl_idx_next", "_etl_idx_time",
+                           "mapped_df", "col_mapping"):
                     st.session_state.pop(_k, None)
 
-            # ── Read CSV (multi-encoding fallback) ────────────────────────────
-            _raw_df = None
-            for _enc in ("utf-8", "cp1251", "latin-1"):
-                try:
-                    _etl_file.seek(0)
-                    _raw_df = pd.read_csv(_etl_file, encoding=_enc)
-                    break
-                except Exception:
-                    continue
+            # ── Read CSV (robust: skips garbage rows above real header) ──────
+            _etl_file.seek(0)
+            _raw_df = load_cleaned_csv(_etl_file)
             if _raw_df is None:
-                st.error("Could not parse CSV — try saving as UTF-8.")
+                st.error("Не удалось распознать CSV — убедитесь, что файл содержит "
+                         "строку заголовков с 4+ столбцами. / "
+                         "Could not detect a valid header row (need 4+ columns).")
             else:
                 _cols = list(_raw_df.columns)
 
