@@ -384,23 +384,28 @@ def run_dashboard():
         color: #1D1D1F !important; font-size: 17px !important;
         font-weight: 600 !important; letter-spacing: -0.02em !important;
     }
-    [data-testid="metric-container"] {
+    [data-testid="metric-container"],
+    [data-testid="stMetric"] {
         background: #FFFFFF !important; border-radius: 18px !important;
         padding: 24px 26px !important; border: none !important;
         box-shadow: 0 2px 20px rgba(0,0,0,0.08) !important;
         transition: box-shadow 0.3s ease, transform 0.3s ease !important;
     }
-    [data-testid="metric-container"]:hover {
+    [data-testid="metric-container"]:hover,
+    [data-testid="stMetric"]:hover {
         box-shadow: 0 4px 32px rgba(0,0,0,0.13) !important; transform: scale(1.015) !important;
     }
     [data-testid="stMetricLabel"] > div {
         color: #6E6E73 !important; font-size: 13px !important; font-weight: 400 !important;
+        letter-spacing: 0 !important; text-transform: none !important; font-family: inherit !important;
     }
+    [data-testid="stMetricValue"],
     [data-testid="stMetricValue"] > div {
-        color: #34C759 !important; font-size: 32px !important;
-        font-weight: 700 !important; letter-spacing: -0.04em !important;
+        color: #1D1D1F !important; font-size: 30px !important;
+        font-weight: 700 !important; letter-spacing: -0.03em !important; font-family: inherit !important;
     }
-    [data-testid="stMetricDelta"] > div { font-size: 13px !important; font-weight: 400 !important; }
+    [data-testid="stMetricDelta"],
+    [data-testid="stMetricDelta"] > div { font-size: 13px !important; font-weight: 400 !important; font-family: inherit !important; }
     .stTabs [data-baseweb="tab-list"] {
         background: transparent !important;
         border-bottom: 1px solid rgba(0,0,0,0.10) !important; gap: 0 !important;
@@ -1455,26 +1460,27 @@ def run_dashboard():
     margin-bottom: 18px;
 }
 [data-testid="stMetric"] {
-    background: #2C2C2E;
-    border-radius: 10px;
-    padding: 16px 20px 14px;
+    background: #FFFFFF !important;
+    border-radius: 18px !important;
+    padding: 24px 26px !important;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08) !important;
 }
 [data-testid="stMetricLabel"] > div {
-    font-family: 'SF Mono', 'Courier New', monospace !important;
-    font-size: 9px !important;
-    letter-spacing: 2.5px !important;
-    color: #8E8E93 !important;
-    text-transform: uppercase !important;
+    font-size: 13px !important;
+    letter-spacing: 0 !important;
+    color: #6E6E73 !important;
+    text-transform: none !important;
+    font-family: inherit !important;
 }
 [data-testid="stMetricValue"] {
-    font-family: 'SF Mono', 'Courier New', monospace !important;
-    font-size: 26px !important;
-    color: #F5F5F7 !important;
-    font-weight: 600 !important;
+    font-size: 28px !important;
+    color: #1D1D1F !important;
+    font-weight: 700 !important;
+    font-family: inherit !important;
 }
 [data-testid="stMetricDelta"] {
-    font-family: 'SF Mono', 'Courier New', monospace !important;
-    font-size: 11px !important;
+    font-size: 13px !important;
+    font-family: inherit !important;
 }
 </style>""", unsafe_allow_html=True)
 
