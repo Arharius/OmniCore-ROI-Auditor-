@@ -652,8 +652,9 @@ def run_dashboard():
     # NEGATIVE: failed / neutral final states → absorbing, but NOT positive signals.
     _NEGATIVE_KW = {
         "refunded", "cancelled", "canceled", "rejected", "archived",
-        "отклонено", "отменено", "возврат",
-        "odbijeno", "otkazano",
+        "seized", "confiscated", "lost", "failed", "expired", "returned",
+        "отклонено", "отменено", "возврат", "изъято", "потеряно",
+        "odbijeno", "otkazano", "oduzeto",
     }
     # All absorbing states = union (used to detect that a ticket has actually ended)
     _ABSORBING_KW = _POSITIVE_KW | _NEGATIVE_KW
@@ -918,7 +919,7 @@ def run_dashboard():
                 # so a new upload never shows stale results from the old file.
                 for _k in ("_etl_idx_entity", "_etl_idx_current",
                            "_etl_idx_next", "_etl_idx_time",
-                           "mapped_df", "col_mapping"):
+                           "mapped_df", "col_mapping", "_etl_computed_fkey"):
                     st.session_state.pop(_k, None)
 
             # ── Read CSV via bulletproof universal parser ─────────────────
@@ -1000,6 +1001,12 @@ def run_dashboard():
                     "next_stage":   col_next,
                     "time_spent":   col_time,
                 }
+                # ── Force re-run so the compute block (rendered before this
+                #    section) picks up the newly mapped data immediately.
+                #    Guard with a fkey so we only rerun once per new file. ──
+                if st.session_state.get("_etl_computed_fkey") != _etl_fkey:
+                    st.session_state["_etl_computed_fkey"] = _etl_fkey
+                    st.rerun()
 
                 # ── Data summary badge ─────────────────────────────────────────
                 _n_ent = _mapped["entity_id"].nunique()
