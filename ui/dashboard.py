@@ -775,6 +775,38 @@ def run_dashboard():
     Q_mat    = _default_Q
     m_states = _default_states
 
+    # ── When CSV is loaded: derive Q_mat + m_states from real transition data ──
+    if _mkv_graph_res is not None:
+        try:
+            _G = _mkv_graph_res.G
+            # Absorbing nodes = terminal states (no outgoing edges)
+            _absorbing = {n for n in _G.nodes() if _G.out_degree(n) == 0}
+            # Also treat next_stage-only nodes with absorbing keywords as absorbing
+            _absorbing |= {
+                n for n in _G.nodes()
+                if any(kw in str(n).lower()
+                       for kw in ("delivered","seized","done","closed","resolved",
+                                  "won","rejected","cancelled","canceled","lost"))
+                and _G.out_degree(n) == 0
+            }
+            # Transient nodes: have outgoing edges and are NOT absorbing
+            _transient = [n for n in _G.nodes()
+                          if n not in _absorbing and _G.out_degree(n) > 0]
+            if len(_transient) >= 2:
+                _n = len(_transient)
+                _Q = np.zeros((_n, _n))
+                for _i, _fi in enumerate(_transient):
+                    for _j, _tj in enumerate(_transient):
+                        _Q[_i][_j] = _mkv_graph_res.transition_probs.get(
+                            (_fi, _tj), 0.0)
+                # Validate: I-Q must be invertible (spectral radius of Q < 1)
+                _eigs = np.abs(np.linalg.eigvals(_Q))
+                if _eigs.max() < 1.0:
+                    Q_mat    = _Q
+                    m_states = _transient
+        except Exception:
+            pass  # Fall back to demo Q_mat silently
+
     if process_log is not None and process_log.avg_time_per_state:
         _fallback_h = float(cycle_before) * 24 / max(len(m_states), 1)
         state_times = np.array([
