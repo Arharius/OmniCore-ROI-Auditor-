@@ -634,13 +634,29 @@ def run_dashboard():
     _cost_per_hour = float(st.session_state.get("fin_cost_per_hour", 12.0))
     _hours_per_day = float(st.session_state.get("fin_hours_per_day", 8.0))
 
-    # Absorbing-state keywords (multi-language)
-    _ABSORBING_KW = {
-        "done", "completed", "won", "closed", "delivered", "shipped",
-        "approved", "deployed", "production", "complete", "finished",
-        "завершена", "выполнено", "продано", "закрыта", "доставлено",
+    # ── Absorbing-state dictionaries ─────────────────────────────────────────
+    # POSITIVE: successful final states → count toward pos_signals and p_before.
+    _POSITIVE_KW = {
+        # English — generic
+        "done", "completed", "complete", "finished", "closed", "won",
+        "delivered", "shipped", "approved", "deployed", "production",
+        # English — support / ITSM (Jira, Zendesk, ServiceNow)
+        "resolved", "resolution", "fixed", "fulfilled",
+        "accepted", "verified", "released",
+        # Russian
+        "завершена", "завершено", "выполнено", "продано", "закрыта",
+        "закрыто", "доставлено",
+        # Serbian
         "završeno", "zatvoreno", "isporučeno",
     }
+    # NEGATIVE: failed / neutral final states → absorbing, but NOT positive signals.
+    _NEGATIVE_KW = {
+        "refunded", "cancelled", "canceled", "rejected", "archived",
+        "отклонено", "отменено", "возврат",
+        "odbijeno", "otkazano",
+    }
+    # All absorbing states = union (used to detect that a ticket has actually ended)
+    _ABSORBING_KW = _POSITIVE_KW | _NEGATIVE_KW
 
     if _mapped_df is not None and len(_mapped_df) > 0:
         # ── Derive cycle time per entity ────────────────────────────────────
@@ -660,13 +676,17 @@ def run_dashboard():
         hour_rate    = _cost_per_hour
 
         # ── Estimate completion probability from absorbing states ───────────
-        _next_lower  = _mapped_df["next_stage"].astype(str).str.lower().str.strip()
-        _completed   = _mapped_df[_next_lower.isin(_ABSORBING_KW)]["entity_id"].nunique()
-        p_before     = max(30, min(95, int(_completed / _unique_ent * 100)))
-        p_after      = min(99, int(p_before * 1.28))
-
-        pos_signals  = max(1, min(_completed, _unique_ent))
-        tot_signals  = max(2, _unique_ent)
+        _next_lower   = _mapped_df["next_stage"].astype(str).str.lower().str.strip()
+        # Positive completions: successful endings (Resolved, Done, Closed, …)
+        _pos_done     = _mapped_df[_next_lower.isin(_POSITIVE_KW)]["entity_id"].nunique()
+        # All endings: positive + negative (Refunded, Cancelled, Rejected, …)
+        _all_done     = _mapped_df[_next_lower.isin(_ABSORBING_KW)]["entity_id"].nunique()
+        # p_before = success rate = positive / total entities observed
+        p_before      = max(30, min(95, int(_pos_done / _unique_ent * 100)))
+        p_after       = min(99, int(p_before * 1.28))
+        # Bayesian signals: how many succeeded out of all that finished
+        pos_signals   = max(1, _pos_done)
+        tot_signals   = max(2, max(_all_done, _unique_ent))
     else:
         # ── Neutral demonstration defaults (no CSV loaded) ──────────────────
         volume, cycle_before, cycle_after = 600, 21, 9
@@ -685,9 +705,18 @@ def run_dashboard():
     pipeline_util   = 30
     deals           = deals_month
 
-    # Seed Bayesian tab sliders with derived values (setdefault = only on first run)
-    st.session_state.setdefault("pos_signals", pos_signals)
-    st.session_state.setdefault("tot_signals", tot_signals)
+    # Seed Bayesian tab sliders.
+    # When CSV is loaded, always overwrite so sliders reflect actual data.
+    # When no CSV (else branch), only set on first run — don't clobber manual adjustments.
+    if _mapped_df is not None and len(_mapped_df) > 0:
+        st.session_state["pos_signals"]    = pos_signals
+        st.session_state["tot_signals"]    = tot_signals
+        # Prior = empirical completion rate from CSV (p_before already clamped 30-95)
+        st.session_state["bayes_prior_pct"] = p_before
+    else:
+        st.session_state.setdefault("pos_signals",    pos_signals)
+        st.session_state.setdefault("tot_signals",    tot_signals)
+        st.session_state.setdefault("bayes_prior_pct", 34)
 
     inp = ROIInput(
         company_name=company_name,
@@ -710,7 +739,10 @@ def run_dashboard():
         pipeline_utilization_pct=float(pipeline_util),
     )
 
-    bayes_res = math_eng.bayesian_update(inp.positive_signals, inp.total_signals)
+    _bayes_prior_rate = st.session_state.get("bayes_prior_pct", 34) / 100.0
+    bayes_res = math_eng.bayesian_update(
+        inp.positive_signals, inp.total_signals, prior_rate=_bayes_prior_rate
+    )
     res = roi_eng.calculate(inp, bayes_result=bayes_res)
     res = _apply_confidence(res, st.session_state.get("scenario_confidence", 0.75))
     st.session_state["_saved_roi_pct"] = res.roi_pct
@@ -1925,15 +1957,33 @@ def run_dashboard():
         st.subheader(t(lang, "bayes_title"))
         b1, b2 = st.columns(2)
         with b1:
-            pos_signals = st.slider(t(lang, "positive_signals"), 1, 50, 4, key="pos_signals")
+            pos_signals = st.slider(t(lang, "positive_signals"), 1, 50, key="pos_signals")
         with b2:
-            tot_signals = st.slider(t(lang, "total_signals"), 2, 100, 5, key="tot_signals")
-        bayes_live = math_eng.bayesian_update(pos_signals, tot_signals)
+            tot_signals = st.slider(t(lang, "total_signals"), 2, 100, key="tot_signals")
+
+        # Prior slider — seeded from CSV completion rate when data is uploaded,
+        # otherwise defaults to 34 (conservative demo prior).
+        # session_state["bayes_prior_pct"] is always pre-populated above
+        # (p_before from CSV, or 34 via setdefault), so value= is not needed.
+        _prior_label_b = {"en": "Prior belief (%)", "ru": "Априорная уверенность (%)",
+                          "sr": "Apriorna verovatnoća (%)"}.get(lang, "Prior belief (%)")
+        _prior_help_b  = {"en": "Starting probability before observing signals. Auto-set from CSV when data is loaded.",
+                          "ru": "Начальная вероятность до наблюдения сигналов. Авто-заполняется из CSV.",
+                          "sr": "Početna verovatnoća pre posmatranja signala. Automatski iz CSV-a."
+                         }.get(lang, "")
+        bayes_prior_pct = st.slider(
+            _prior_label_b, min_value=1, max_value=99,
+            step=1, format="%d%%",
+            help=_prior_help_b, key="bayes_prior_pct",
+        )
+        _bpr = bayes_prior_pct / 100.0  # float prior rate for calculations
+
+        bayes_live = math_eng.bayesian_update(pos_signals, tot_signals, prior_rate=_bpr)
         bc1, bc2, bc3 = st.columns(3)
         bc1.metric(t(lang, "prior"),     "{:.1f}%".format(bayes_live.prior_pct))
         bc2.metric(t(lang, "posterior"), "{:.1f}%".format(bayes_live.posterior_pct))
         bc3.metric(t(lang, "ci_80"), "{}% – {}%".format(bayes_live.ci_80_low, bayes_live.ci_80_high))
-        prior_a  = 0.34 * 10; prior_b  = (1 - 0.34) * 10
+        prior_a  = _bpr * 10; prior_b  = (1 - _bpr) * 10
         post_a   = prior_a + pos_signals; post_b   = prior_b + (tot_signals - pos_signals)
         x        = np.linspace(0.01, 0.99, 300)
         y_prior  = stats.beta.pdf(x, prior_a, prior_b)
