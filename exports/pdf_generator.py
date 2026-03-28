@@ -166,6 +166,7 @@ def build_roi_passport_pdf(
             "notes_title":   "Meeting notes",
             "next_step":     "Next step:",
             "next_body":     "Pass the report to the implementation team and agree on the roadmap.",
+            "next_body_block": "[!] STATUS: AUTOMATION BLOCKED. The process generates a loss and is not ready for scaling. Recommended: stop the implementation project, audit business logic and Process Mining of bottlenecks.",
             "auditor_lbl":   "Auditor:",
         },
         "ru": {
@@ -208,6 +209,7 @@ def build_roi_passport_pdf(
             "notes_title":   "Заметки встречи",
             "next_step":     "Следующий шаг:",
             "next_body":     "Передать отчёт команде внедрения и согласовать план-график автоматизации.",
+            "next_body_block": "[!] СТАТУС: АВТОМАТИЗАЦИЯ ЗАБЛОКИРОВАНА. Процесс генерирует убыток и не готов к масштабированию. Рекомендуется остановка проекта внедрения, аудит бизнес-логики и Process Mining узких мест.",
             "auditor_lbl":   "Аудитор:",
         },
         "sr": {
@@ -250,6 +252,7 @@ def build_roi_passport_pdf(
             "notes_title":   "Beleške sa sastanka",
             "next_step":     "Sledeći korak:",
             "next_body":     "Proslediti izveštaj timu za implementaciju i dogovoriti plan automatizacije.",
+            "next_body_block": "[!] STATUS: AUTOMATIZACIJA BLOKIRANA. Proces generiše gubitak i nije spreman za skaliranje. Preporučuje se zaustavljanje projekta implementacije, revizija poslovne logike i Process Mining uskih grla.",
             "auditor_lbl":   "Revizor:",
         },
     }
@@ -427,9 +430,18 @@ def build_roi_passport_pdf(
     # ── 8. FOOTER + QR ─────────────────────────────────────────────────────────
     qr_img = _make_qr(contact_url, size_cm=2.5) if contact_url else None
 
+    # Dynamic next step based on net_roi and Bayesian posterior probability
+    if net_roi > 0 and bayes_posterior >= 50:
+        _next_body_text = T["next_body"]
+        _next_body_style = S_LEFT
+    else:
+        _next_body_text = T["next_body_block"]
+        _next_body_style = _style("s_warn", fontName="Helvetica-Bold",
+                                  textColor=HexColor("#FF6692"))
+
     footer_text = [
         [_p(T["next_step"], S_BOLD_L),
-         _p(T["next_body"], S_LEFT)],
+         _p(_next_body_text, _next_body_style)],
         [_p(T["auditor_lbl"], S_BOLD_L),
          _p("{} | OmniCore ROI Auditor v1.0 | {}".format(auditor_name, today_str), S_LEFT)],
     ]
