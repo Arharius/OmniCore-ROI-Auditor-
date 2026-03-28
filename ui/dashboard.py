@@ -752,6 +752,7 @@ def run_dashboard():
     res = roi_eng.calculate(inp, bayes_result=bayes_res)
     res = _apply_confidence(res, st.session_state.get("scenario_confidence", 0.75))
     st.session_state["_saved_roi_pct"] = res.roi_pct
+    st.session_state["_saved_net_roi"]  = res.net_roi
 
     process_log = None
     _default_edges = [
@@ -2565,3 +2566,73 @@ def run_dashboard():
                 f'</div>',
                 unsafe_allow_html=True,
             )
+
+    # ── SOVEREIGN OS EXPORT ───────────────────────────────────────────────────
+    _export_title = {
+        "en": "Export to Sovereign OS (Neon DB)",
+        "ru": "Экспорт в Sovereign OS (Neon DB)",
+        "sr": "Izvoz u Sovereign OS (Neon DB)",
+    }.get(lang, "Export to Sovereign OS (Neon DB)")
+    _export_name_label = {
+        "en": "Client Name",
+        "ru": "Название клиента",
+        "sr": "Ime klijenta",
+    }.get(lang, "Client Name")
+    _export_btn_label = {
+        "en": "Export to Sovereign OS (Neon DB)",
+        "ru": "Экспортировать в Sovereign OS (Neon DB)",
+        "sr": "Izvezi u Sovereign OS (Neon DB)",
+    }.get(lang, "Export to Sovereign OS (Neon DB)")
+    _export_success = {
+        "en": "Audit result saved to Neon DB successfully.",
+        "ru": "Результат аудита успешно сохранён в Neon DB.",
+        "sr": "Rezultat revizije uspješno sačuvan u Neon DB.",
+    }.get(lang, "Audit result saved to Neon DB.")
+    _export_error = {
+        "en": "Failed to save — check DATABASE_URL and DB connectivity.",
+        "ru": "Ошибка сохранения — проверьте DATABASE_URL и подключение к БД.",
+        "sr": "Greška pri čuvanju — proverite DATABASE_URL i konekciju sa bazom.",
+    }.get(lang, "Failed to save — check DATABASE_URL.")
+    _export_nodata = {
+        "en": "Run the audit first so that metrics are available.",
+        "ru": "Сначала запустите аудит, чтобы метрики были доступны.",
+        "sr": "Prvo pokrenite reviziju kako bi metrike bile dostupne.",
+    }.get(lang, "Run the audit first.")
+
+    st.markdown(
+        "<hr style='border:none;border-top:1px solid rgba(0,0,0,0.08);margin:32px 0 20px;'>",
+        unsafe_allow_html=True,
+    )
+    st.subheader(_export_title)
+
+    _exp_client = st.text_input(
+        _export_name_label,
+        value=st.session_state.get("company_name_input", company_name),
+        key="sovereign_client_name",
+        max_chars=255,
+    )
+
+    if st.button(_export_btn_label, key="sovereign_export_btn", type="primary"):
+        from db_connector import save_audit_result as _save_audit_result
+
+        _bt   = st.session_state.get("_saved_bottleneck", "N/A")
+        _tax  = st.session_state.get("_saved_friction_tax", 0.0) or 0.0
+        _prob = st.session_state.get("_saved_confidence", 0.0) or 0.0
+        _roi  = st.session_state.get("_saved_net_roi", 0.0) or 0.0
+
+        if not _exp_client.strip():
+            st.warning(_export_name_label)
+        elif _bt == "N/A" and _roi == 0.0:
+            st.info(_export_nodata)
+        else:
+            _ok = _save_audit_result(
+                client_name=_exp_client.strip(),
+                bottleneck=str(_bt),
+                tax=float(_tax),
+                prob=float(_prob),
+                roi=float(_roi),
+            )
+            if _ok:
+                st.success(_export_success)
+            else:
+                st.error(_export_error)
