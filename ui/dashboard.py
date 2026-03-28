@@ -1774,7 +1774,8 @@ def run_dashboard():
                 name="Stages",
             ))
 
-            _no_axes = {k: v for k, v in CHART_LAYOUT.items() if k not in ("xaxis", "yaxis")}
+            _no_axes = {k: v for k, v in CHART_LAYOUT.items()
+                        if k not in ("xaxis", "yaxis", "legend")}
             _fig_mk.update_layout(
                 annotations=_ann_list,
                 showlegend=True,
