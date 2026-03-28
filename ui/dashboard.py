@@ -2115,8 +2115,12 @@ def run_dashboard():
                         bayes_prior=bayes_res.prior_pct,
                         bayes_posterior=bayes_res.posterior_pct,
                         bayes_ci="{}%-{}%".format(bayes_res.ci_80_low, bayes_res.ci_80_high),
-                        bottleneck_node=graph_res.bottleneck_node,
-                        bottleneck_score=graph_res.bottleneck_score,
+                        bottleneck_node=(_mkv_graph_res.bottleneck_node
+                                         if _mkv_graph_res is not None
+                                         else graph_res.bottleneck_node),
+                        bottleneck_score=(_mkv_graph_res.bottleneck_score
+                                          if _mkv_graph_res is not None
+                                          else graph_res.bottleneck_score),
                         net_roi=res.net_roi,
                         roi_pct=res.roi_pct,
                         payback_months=res.payback_months,
