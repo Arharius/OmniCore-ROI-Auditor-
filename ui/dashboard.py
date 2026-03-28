@@ -357,6 +357,51 @@ CHART_LAYOUT = dict(
 )
 
 
+def _extract_stage_name(raw) -> str:
+    """
+    Return a clean bottleneck stage name from any raw value.
+
+    Handles:
+    - Clean string:           "Culture Fit"         → "Culture Fit"
+    - Full CSV row string:    "APP-5001,Culture Fit,3,Background Check,"
+                                                     → "Culture Fit"
+    - Python tuple/list:      ("Culture Fit",)       → "Culture Fit"
+    - Tuple repr string:      "('Culture Fit',)"     → "Culture Fit"
+    """
+    import re as _re
+
+    # Unwrap actual tuples / lists
+    if isinstance(raw, (tuple, list)):
+        raw = raw[0] if raw else ""
+
+    s = str(raw).strip()
+
+    # Strip Python tuple/list repr:  ('Stage A',)  or  ['Stage A']
+    _tuple_pat = _re.compile(r"^[\(\[]\s*'(.+?)'\s*,?\s*[\)\]]$")
+    m = _tuple_pat.match(s)
+    if m:
+        return m.group(1).strip()
+
+    s = s.rstrip(",").strip()
+    if not s or s == "nan":
+        return ""
+    if "," not in s:
+        return s
+
+    # Split CSV-like row and pick the best stage-name token
+    parts = [p.strip() for p in s.split(",") if p.strip()]
+    _id_pat = _re.compile(r'^[A-Za-z]{1,6}-?\d+$')
+    candidates = [
+        p for p in parts
+        if p
+        and not p.replace(".", "").replace("-", "").isdigit()
+        and not _id_pat.match(p)
+    ]
+    if candidates:
+        return candidates[0]
+    return parts[0] if parts else s
+
+
 def run_dashboard():
 
     # ── CSS ────────────────────────────────────────────────────────────────────
@@ -1535,7 +1580,7 @@ def run_dashboard():
             # ── Persist metrics in session state for "Save client" button ─────
             st.session_state["_saved_friction_tax"]       = _friction_usd
             st.session_state["_saved_confidence"]         = _posterior_pct
-            st.session_state["_saved_bottleneck"]         = _bt_node
+            st.session_state["_saved_bottleneck"]         = _extract_stage_name(_bt_node)
             st.session_state["_saved_rework_rate"]        = _mgr.bottleneck_rework_rate * 100.0
             if _mkv_graph_res is not None:
                 st.session_state["_saved_total_transitions"] = int(_mkv_graph_res.total_transitions)
@@ -2615,10 +2660,11 @@ def run_dashboard():
     if st.button(_export_btn_label, key="sovereign_export_btn", type="primary"):
         from db_connector import save_audit_result as _save_audit_result
 
-        _bt   = st.session_state.get("_saved_bottleneck", "N/A")
-        _tax  = st.session_state.get("_saved_friction_tax", 0.0) or 0.0
-        _prob = st.session_state.get("_saved_confidence", 0.0) or 0.0
-        _roi  = st.session_state.get("_saved_net_roi", 0.0) or 0.0
+        _bt_raw = st.session_state.get("_saved_bottleneck", "")
+        _bt     = _extract_stage_name(_bt_raw) or "N/A"
+        _tax    = st.session_state.get("_saved_friction_tax", 0.0) or 0.0
+        _prob   = st.session_state.get("_saved_confidence", 0.0) or 0.0
+        _roi    = st.session_state.get("_saved_net_roi", 0.0) or 0.0
 
         if not _exp_client.strip():
             st.warning(_export_name_label)
@@ -2627,7 +2673,7 @@ def run_dashboard():
         else:
             _ok = _save_audit_result(
                 client_name=_exp_client.strip(),
-                bottleneck=str(_bt),
+                bottleneck=_bt,
                 tax=float(_tax),
                 prob=float(_prob),
                 roi=float(_roi),
