@@ -8,4 +8,3 @@ reportlab>=4.0.0
 qrcode[pil]>=7.4.2
 Pillow>=9.0.0,<11.0.0
 pg8000
-matplotlib>=3.7.0,<3.10.0
