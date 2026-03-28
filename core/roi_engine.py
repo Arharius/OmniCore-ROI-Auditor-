@@ -120,6 +120,7 @@ class ROIEngine:
                 "months":      "mo.",
                 "next":        "Next step: pass the report to the implementation team",
                 "next2":       "and agree on the automation roadmap.",
+                "next_block":  "[!] STATUS: AUTOMATION BLOCKED\nNext step: The process generates a loss and is not ready for scaling.\nRecommended: Stop the implementation project, audit business logic and Process Mining of bottlenecks.",
                 "auditor_lbl": "Auditor",
             },
             "ru": {
@@ -141,6 +142,7 @@ class ROIEngine:
                 "months":      "мес.",
                 "next":        "Следующий шаг: передать отчёт команде внедрения",
                 "next2":       "и согласовать план-график автоматизации.",
+                "next_block":  "[!] СТАТУС: АВТОМАТИЗАЦИЯ ЗАБЛОКИРОВАНА\nСледующий шаг: Процесс генерирует убыток и не готов к масштабированию.\nРекомендуется остановка проекта внедрения, аудит бизнес-логики и Process Mining узких мест.",
                 "auditor_lbl": "Аудитор",
             },
             "sr": {
@@ -162,6 +164,7 @@ class ROIEngine:
                 "months":      "mes.",
                 "next":        "Sledeći korak: proslediti izveštaj timu za implementaciju",
                 "next2":       "i dogovoriti plan automatizacije.",
+                "next_block":  "[!] STATUS: AUTOMATIZACIJA BLOKIRANA\nSledeći korak: Proces generiše gubitak i nije spreman za skaliranje.\nPreporučuje se zaustavljanje projekta implementacije, revizija poslovne logike i Process Mining uskih grla.",
                 "auditor_lbl": "Revizor",
             },
         }
@@ -180,6 +183,18 @@ class ROIEngine:
 
         SEP = "=" * 64
         sep = "-" * 64
+
+        # ── Dynamic Next Step ────────────────────────────────────────────────
+        if res.net_roi > 0 and res.bayesian_posterior_pct >= 50:
+            next_lines = [
+                "  {}".format(l["next"]),
+                "  {}".format(l["next2"]),
+            ]
+        else:
+            next_lines = [
+                "  " + line for line in l["next_block"].split("\n")
+            ]
+
         lines = [
             SEP,
             "  {}".format(l["title"]),
@@ -202,8 +217,7 @@ class ROIEngine:
             "  {}: {:>16.2f}%".format(l["roi_pct"],   res.roi_pct),
             "  {}: {:>12.1f} {}".format(l["payback"],  res.payback_months, l["months"]),
             SEP,
-            "  {}".format(l["next"]),
-            "  {}".format(l["next2"]),
+            *next_lines,
             sep,
             "  {}: {} | OmniCore ROI Engine v1.0 | {}".format(
                 l["auditor_lbl"],
