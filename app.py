@@ -4,7 +4,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
 from db.database import init_db
+from db_connector import init_db as init_omnicore_db
 init_db()
+init_omnicore_db()
 
 st.set_page_config(
     page_title="OmniCore ROI Auditor",
