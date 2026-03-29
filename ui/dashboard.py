@@ -18,8 +18,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-from scipy import stats
-
 import dataclasses
 
 from core.math_engine import MathEngine, build_markov_graph, MarkovGraphResult
@@ -2191,9 +2189,10 @@ def run_dashboard():
             )
             _step_sr = _step_en
             st.markdown({"en": _step_en, "ru": _step_ru, "sr": _step_sr}.get(lang, _step_en))
+        from scipy import stats as _st
         x        = np.linspace(0.01, 0.99, 300)
-        y_prior  = stats.beta.pdf(x, prior_a, prior_b)
-        y_post   = stats.beta.pdf(x, post_a,  post_b)
+        y_prior  = _st.beta.pdf(x, prior_a, prior_b)
+        y_post   = _st.beta.pdf(x, post_a,  post_b)
         fig_b = go.Figure()
         fig_b.add_trace(go.Scatter(x=x*100, y=y_prior, mode="lines", name=t(lang, "prior_label"),
                                    line=dict(color=_C["gold"], width=2),
