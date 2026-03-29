@@ -15,12 +15,16 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+from core.session_cookie import get_cookie_manager, restore_session, clear_auth_cookie
+_cookie_mgr = get_cookie_manager()
+restore_session(_cookie_mgr)
+
 authenticated = st.session_state.get("authenticated")
 demo_only     = st.session_state.get("demo_only")
 
 if not authenticated and not demo_only:
     from ui.landing import show_landing
-    show_landing()
+    show_landing(_cookie_mgr)
     st.stop()
 
 auth_user = st.session_state.get("auth_user", {})
@@ -56,6 +60,7 @@ with st.sidebar:
         )
         if col_out.button("↩", key="nav_logout", help="Sign out",
                           use_container_width=True):
+            clear_auth_cookie(_cookie_mgr)
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
