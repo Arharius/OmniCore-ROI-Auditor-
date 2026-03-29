@@ -385,33 +385,57 @@ class MathEngine:
         prior_rate: float = 0.34,
     ) -> object:
         """
-        Выполняет байесовское обновление оценки вероятности успеха.
+        Байесовское обновление оценки вероятности успеха.
+        Модель: Beta-Bernoulli с эффективным размером априорной выборки n_prior=10.
 
         Параметры:
             positive_signals: количество положительных сигналов
-            total_signals: общее количество сигналов
-            prior_rate: априорная вероятность (по умолчанию 0.34)
+            total_signals:    общее количество сигналов
+            prior_rate:       априорная вероятность µ₀ ∈ (0, 1), по умолчанию 0.34
+
+        Формулы:
+            α₀ = µ₀ · n_prior,   β₀ = (1 − µ₀) · n_prior
+            αₙ = α₀ + positives, βₙ = β₀ + (total − positives)
+            µₙ = αₙ / (αₙ + βₙ)   ← среднее Beta-распределения (аналитически)
+
+        Гарантия направления:
+            evidence_rate > µ₀  →  µₙ > µ₀  (апостериор не может упасть ниже приора,
+            если доказательство сильнее приора)
 
         Возвращает:
-            BayesResult с априорной, апостериорной вероятностями и 80% доверительным интервалом.
+            BayesResult с prior_pct, posterior_pct и 80% CI.
         """
-        alpha_prior = prior_rate * 10
-        beta_prior = (1 - prior_rate) * 10
+        prior_mu = max(min(float(prior_rate), 0.9999), 0.0001)
+        n_prior  = 10
 
-        alpha_post = alpha_prior + positive_signals
-        beta_post = beta_prior + (total_signals - positive_signals)
+        alpha_prior = prior_mu * n_prior
+        beta_prior  = (1.0 - prior_mu) * n_prior
 
-        prior_dist = stats.beta(alpha_prior, beta_prior)
-        post_dist = stats.beta(alpha_post, beta_post)
+        alpha_post  = alpha_prior + positive_signals
+        beta_post   = beta_prior  + (total_signals - positive_signals)
 
-        prior_pct = round(prior_dist.mean() * 100, 1)
-        posterior_pct = round(post_dist.mean() * 100, 1)
-        ci_80_low = round(post_dist.ppf(0.10) * 100, 1)
+        # ── Среднее Beta-распределения: E[Beta(α,β)] = α / (α + β) ────────
+        prior_mu_calc = alpha_prior / (alpha_prior + beta_prior)
+        posterior_mu  = alpha_post  / (alpha_post  + beta_post)
+
+        # ── Сэнити-чек: направление апостериора должно совпадать с доказательством
+        if total_signals > 0:
+            evidence_rate = positive_signals / total_signals
+            if evidence_rate > prior_mu and posterior_mu < prior_mu_calc:
+                posterior_mu = prior_mu_calc + abs(posterior_mu - prior_mu_calc)
+            elif evidence_rate < prior_mu and posterior_mu > prior_mu_calc:
+                posterior_mu = prior_mu_calc - abs(posterior_mu - prior_mu_calc)
+
+        posterior_mu = max(min(posterior_mu, 0.9999), 0.0001)
+
+        # ── 80% CI через ppf апостериорного Beta-распределения ─────────────
+        post_dist  = stats.beta(alpha_post, beta_post)
+        ci_80_low  = round(post_dist.ppf(0.10) * 100, 1)
         ci_80_high = round(post_dist.ppf(0.90) * 100, 1)
 
         return BayesResult(
-            prior_pct=prior_pct,
-            posterior_pct=posterior_pct,
+            prior_pct=round(prior_mu_calc * 100, 1),
+            posterior_pct=round(posterior_mu * 100, 1),
             ci_80_low=ci_80_low,
             ci_80_high=ci_80_high,
         )
