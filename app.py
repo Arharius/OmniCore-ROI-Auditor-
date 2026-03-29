@@ -34,11 +34,12 @@ if not _authenticated and not _demo_only:
     _authenticated = st.session_state.get("authenticated")
     _demo_only     = st.session_state.get("demo_only")
 
-elif _pending_token:
+if _pending_token:
     # First dashboard render after login — set the cookie silently
     from core.session_cookie import get_cookie_manager, COOKIE_NAME
     from datetime import datetime, timedelta, timezone
-    _cookie_mgr = get_cookie_manager()
+    if _cookie_mgr is None:
+        _cookie_mgr = get_cookie_manager()
     try:
         _exp = datetime.now(timezone.utc) + timedelta(days=7)
         _cookie_mgr.set(COOKIE_NAME, _pending_token, expires_at=_exp,
@@ -48,6 +49,8 @@ elif _pending_token:
     st.session_state.pop("_auth_token_pending", None)
 
 # ── Auth gate ────────────────────────────────────────────────────────────────
+# Only two ways through: authenticated session OR explicit demo_only flag.
+# demo_only gives read-only dashboard — no CSV upload, no PDF, no DB writes.
 if not _authenticated and not _demo_only:
     from ui.landing import show_landing
     show_landing()
