@@ -1952,7 +1952,10 @@ def run_dashboard():
                        "ru": "Матрица переходных вероятностей",
                        "sr": "Matrica verovatnoća prelaza"}.get(lang, "Transition Matrix")
             with st.expander(_tp_hdr, expanded=False):
-                _all_stages_tp = set(_G.nodes) if _G else set()
+                _all_stages_tp = {
+                    n for n in (_G.nodes if _G else set())
+                    if isinstance(n, str) and n.strip()
+                }
                 _stages_sorted = sorted(_all_stages_tp)
                 _tp_data = {}
                 for _s in _stages_sorted:
