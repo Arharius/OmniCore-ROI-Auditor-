@@ -24,6 +24,7 @@ class ROIInput:
     positive_signals: int = 4
     total_signals: int = 5
     pipeline_utilization_pct: float = 30.0
+    prior_rate_pct: float = 34.0   # Bayesian prior (0–100), mirrors bayes_prior_pct slider
 
 
 @dataclass
@@ -68,7 +69,11 @@ class ROIEngine:
 
         if bayes_result is None:
             engine = MathEngine()
-            bayes_result = engine.bayesian_update(inp.positive_signals, inp.total_signals)
+            bayes_result = engine.bayesian_update(
+                inp.positive_signals,
+                inp.total_signals,
+                prior_rate=inp.prior_rate_pct / 100.0,
+            )
 
         bayesian_ci = f"{bayes_result.ci_80_low}%–{bayes_result.ci_80_high}%"
 
