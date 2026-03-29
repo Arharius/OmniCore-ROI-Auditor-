@@ -639,6 +639,150 @@ except Exception as e:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# SECTION 9: BAYESIAN DIRECTION SANITY CHECK
+# ══════════════════════════════════════════════════════════════════════════════
+section("9. BAYESIAN DIRECTION SANITY CHECK")
+
+eng9 = MathEngine()
+
+# 9.01 — Main bug-report case: prior=30%, evidence=50% → posterior MUST rise
+r901 = eng9.bayesian_update(1, 2, prior_rate=0.30)
+ok("9.01 prior=30% evidence=50% → posterior>prior",
+   r901.posterior_pct > r901.prior_pct,
+   f"prior={r901.prior_pct}% post={r901.posterior_pct}%")
+
+# 9.02 — Expected value check: ~33.3%
+ok("9.02 prior=30% 1/2 → posterior≈33.3%",
+   abs(r901.posterior_pct - 33.3) < 0.5,
+   f"got {r901.posterior_pct}%")
+
+# 9.03 — Evidence weaker than prior → posterior must fall
+r903 = eng9.bayesian_update(0, 2, prior_rate=0.30)
+ok("9.03 prior=30% evidence=0% → posterior<prior",
+   r903.posterior_pct < r903.prior_pct,
+   f"prior={r903.prior_pct}% post={r903.posterior_pct}%")
+
+# 9.04 — Evidence == prior → posterior stays equal
+r904 = eng9.bayesian_update(1, 2, prior_rate=0.50)
+ok("9.04 prior=50% evidence=50% → posterior==prior",
+   abs(r904.posterior_pct - r904.prior_pct) < 0.1,
+   f"prior={r904.prior_pct}% post={r904.posterior_pct}%")
+
+# 9.05 — Strong positive evidence lifts from low prior
+r905 = eng9.bayesian_update(3, 5, prior_rate=0.10)
+ok("9.05 prior=10% evidence=60% → posterior>prior",
+   r905.posterior_pct > r905.prior_pct,
+   f"prior={r905.prior_pct}% post={r905.posterior_pct}%")
+
+# 9.06 — Strong negative evidence lowers from high prior
+r906 = eng9.bayesian_update(1, 5, prior_rate=0.90)
+ok("9.06 prior=90% evidence=20% → posterior<prior",
+   r906.posterior_pct < r906.prior_pct,
+   f"prior={r906.prior_pct}% post={r906.posterior_pct}%")
+
+# 9.07 — CI always ordered: low < posterior_pct < high
+for _pr, _pos, _tot in [(0.30,1,2),(0.10,3,5),(0.90,1,5),(0.50,10,20),(0.01,1,1)]:
+    _r = eng9.bayesian_update(_pos, _tot, prior_rate=_pr)
+    ok(f"9.07 CI ordered prior={int(_pr*100)}% {_pos}/{_tot}",
+       _r.ci_80_low < _r.posterior_pct < _r.ci_80_high,
+       f"[{_r.ci_80_low},{_r.ci_80_high}] post={_r.posterior_pct}")
+
+# 9.08 — Stress: extreme priors don't crash
+for _pr in (0.01, 0.99, 0.001, 0.999):
+    try:
+        _r = eng9.bayesian_update(1, 2, prior_rate=_pr)
+        ok(f"9.08 extreme prior={_pr} no crash", 0 < _r.posterior_pct < 100)
+    except Exception as e:
+        ok(f"9.08 extreme prior={_pr} no crash", False, str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 10: NaN / FLOAT FILTERING IN build_markov_graph
+# ══════════════════════════════════════════════════════════════════════════════
+section("10. NaN FILTERING — build_markov_graph")
+
+def _make_df(rows):
+    return pd.DataFrame(rows, columns=["entity_id","current_stage","next_stage","time_spent"])
+
+# 10.01 — DataFrame with NaN in current_stage must not raise
+_df_nan = _make_df([
+    ("A1","Lead","In Review",1.0),
+    ("A2", float("nan"), "Approved", 2.0),   # NaN current_stage
+    ("A3","In Review","Approved",3.0),
+])
+try:
+    _res10 = build_markov_graph(_df_nan)
+    ok("10.01 NaN current_stage row dropped, no crash", True)
+    ok("10.02 Graph nodes are all strings after NaN row",
+       all(isinstance(n, str) for n in _res10.G.nodes))
+except Exception as e:
+    ok("10.01 NaN current_stage row dropped, no crash", False, str(e))
+    ok("10.02 Graph nodes are all strings after NaN row", False, "skipped")
+
+# 10.03 — DataFrame with NaN in next_stage
+_df_nan2 = _make_df([
+    ("B1","Lead","In Review",1.0),
+    ("B2","In Review", float("nan"), 2.0),   # NaN next_stage
+    ("B3","In Review","Approved",1.0),
+])
+try:
+    _res10b = build_markov_graph(_df_nan2)
+    ok("10.03 NaN next_stage row dropped, no crash", True)
+    ok("10.04 Sorted graph nodes no TypeError",
+       sorted(_res10b.G.nodes) is not None)
+except Exception as e:
+    ok("10.03 NaN next_stage row dropped, no crash", False, str(e))
+    ok("10.04 Sorted graph nodes no TypeError", False, "skipped")
+
+# 10.05 — All-NaN stage raises ValueError (no valid rows)
+_df_all_nan = _make_df([
+    ("C1", float("nan"), float("nan"), 1.0),
+    ("C2", float("nan"), float("nan"), 2.0),
+])
+try:
+    build_markov_graph(_df_all_nan)
+    ok("10.05 All-NaN stages raises ValueError", False, "no exception raised")
+except ValueError:
+    ok("10.05 All-NaN stages raises ValueError", True)
+except Exception as e:
+    ok("10.05 All-NaN stages raises ValueError", False, str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 11: _extract_stage_name — BOTTLENECK CLEANING
+# ══════════════════════════════════════════════════════════════════════════════
+section("11. _extract_stage_name — BOTTLENECK CLEANING")
+
+try:
+    from ui.dashboard import _extract_stage_name
+
+    _esn_cases = [
+        ("APP-5001,Culture Fit,3,Background Check,",  "Culture Fit"),
+        ("T-42,In Review,2,Approved,",                "In Review"),
+        ("Culture Fit",                               "Culture Fit"),
+        ("L2 Support",                                "L2 Support"),
+        ("Vendor Escalation",                         "Vendor Escalation"),
+        (("Culture Fit",),                            "Culture Fit"),
+        ("('Culture Fit',)",                          "Culture Fit"),
+        ("['Background Check']",                      "Background Check"),
+        ("",                                          ""),
+        ("nan",                                       ""),
+        ("Stage A,3,Stage B",                         "Stage A"),
+        ("001,Triage,5,L1 Support,",                  "Triage"),
+        ("XYZ-999,Final Review,1,Done,",              "Final Review"),
+    ]
+
+    for _raw, _expected in _esn_cases:
+        _got = _extract_stage_name(_raw)
+        ok(f"11.XX _extract_stage_name({str(_raw)[:30]!r})",
+           _got == _expected,
+           f"expected={_expected!r} got={_got!r}")
+
+except ImportError as e:
+    ok("11.XX _extract_stage_name import", False, str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # FINAL REPORT
 # ══════════════════════════════════════════════════════════════════════════════
 section("FINAL REPORT")
