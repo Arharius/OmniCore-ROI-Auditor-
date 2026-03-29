@@ -79,7 +79,7 @@ _COPY = {
 }
 
 
-def show_landing():
+def show_landing(cookie_manager=None):
     if "land_lang" not in st.session_state:
         st.session_state["land_lang"] = "ru"
     lang = st.session_state["land_lang"]
@@ -349,6 +349,13 @@ div.stButton > button:hover {
                 st.session_state["auth_user"]    = user
                 st.session_state["authenticated"] = True
                 st.session_state.pop("demo_only", None)
+                if cookie_manager is not None:
+                    from core.session_cookie import set_auth_cookie
+                    set_auth_cookie(
+                        cookie_manager,
+                        username=user.get("username", username),
+                        role=user.get("role", "user"),
+                    )
                 st.rerun()
             else:
                 st.error(c["login_err"])
