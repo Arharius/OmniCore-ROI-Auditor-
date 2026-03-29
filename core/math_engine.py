@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple, Any
 import numpy as np
 import networkx as nx
-from scipy import stats
 import pandas as pd
 
 
@@ -429,7 +428,8 @@ class MathEngine:
         posterior_mu = max(min(posterior_mu, 0.9999), 0.0001)
 
         # ── 80% CI через ppf апостериорного Beta-распределения ─────────────
-        post_dist  = stats.beta(alpha_post, beta_post)
+        from scipy import stats as _stats
+        post_dist  = _stats.beta(alpha_post, beta_post)
         ci_80_low  = round(post_dist.ppf(0.10) * 100, 1)
         ci_80_high = round(post_dist.ppf(0.90) * 100, 1)
 
