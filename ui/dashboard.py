@@ -660,7 +660,11 @@ def run_dashboard():
         # Client history (1)
         st.markdown(t(lang, "history_section"))
         h_col1, h_col2 = st.columns(2)
-        if h_col1.button(t(lang, "save_client"), key="btn_save_hist", use_container_width=True):
+        if is_demo:
+            h_col1.button(t(lang, "save_client"), key="btn_save_hist",
+                          use_container_width=True, disabled=True)
+        elif h_col1.button(t(lang, "save_client"), key="btn_save_hist",
+                           use_container_width=True):
             _extra = {
                 "friction_tax_usd":         st.session_state.get("_saved_friction_tax"),
                 "adjusted_confidence_pct":  st.session_state.get("_saved_confidence"),
@@ -2770,7 +2774,9 @@ def run_dashboard():
         max_chars=255,
     )
 
-    if st.button(_export_btn_label, key="sovereign_export_btn", type="primary"):
+    _export_disabled = is_demo
+    if st.button(_export_btn_label, key="sovereign_export_btn", type="primary",
+                 disabled=_export_disabled):
         from db_connector import save_audit_result as _save_audit_result
 
         _bt_raw = st.session_state.get("_saved_bottleneck", "")
