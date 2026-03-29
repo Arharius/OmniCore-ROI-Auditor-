@@ -783,6 +783,152 @@ except ImportError as e:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# 12.  _best_idx — WHOLE-WORD vs SUBSTRING MATCHING
+# ══════════════════════════════════════════════════════════════════════════════
+section("12. _best_idx — COLUMN DETECTION SAFETY")
+
+try:
+    from ui.dashboard import _best_idx
+
+    # "id" must NOT match "confidence" (short hint, needs whole-word boundary)
+    cols_ids = ["confidence", "stage_id", "entity_id", "deal_id"]
+    _r = _best_idx(["id"], cols_ids, 0)
+    ok("12.01 'id' does not substring-match 'confidence'",
+       cols_ids[_r] != "confidence",
+       f"matched {cols_ids[_r]!r}")
+
+    # "entity_id" must match exactly "entity_id"
+    cols_eid = ["stage", "confidence", "entity_id", "next_stage", "time_spent"]
+    _r = _best_idx(["entity_id"], cols_eid, 0)
+    ok("12.02 'entity_id' hint matches 'entity_id' column",
+       cols_eid[_r] == "entity_id",
+       f"got {cols_eid[_r]!r}")
+
+    # "current_stage" must match "current_stage" (not "stage_id")
+    cols_cs = ["stage_id", "current_stage", "next_stage", "time_spent"]
+    _r = _best_idx(["current_stage", "stage", "from"], cols_cs, 0)
+    ok("12.03 'current_stage' hint matches 'current_stage'",
+       cols_cs[_r] == "current_stage",
+       f"got {cols_cs[_r]!r}")
+
+    # "next_stage" must match "next_stage" (not "stage_id")
+    cols_ns = ["stage_id", "next_stage", "current_stage", "time_spent"]
+    _r = _best_idx(["next_stage", "to_stage", "target"], cols_ns, 0)
+    ok("12.04 'next_stage' hint matches 'next_stage'",
+       cols_ns[_r] == "next_stage",
+       f"got {cols_ns[_r]!r}")
+
+    # Fallback to substring: "conf" (≥4 chars) should match "confidence"
+    cols_conf = ["stage", "confidence", "entity", "time"]
+    _r = _best_idx(["conf", "pct", "rate"], cols_conf, 0)
+    ok("12.05 'conf' substring (≥4) matches 'confidence'",
+       cols_conf[_r] == "confidence",
+       f"got {cols_conf[_r]!r}")
+
+    # Short 2-char hint "id" must NOT trigger substring match on "confidence"
+    cols_short = ["confidence", "stage", "entity", "time"]
+    _r = _best_idx(["id", "key", "ref"], cols_short, 99)
+    ok("12.06 'id' (2 chars) skipped in substring pass → returns default=99",
+       _r == 99,
+       f"got {_r}")
+
+    # "time_spent" (exact) must match "time_spent" column
+    cols_time = ["stage", "next_stage", "time_spent", "entity_id"]
+    _r = _best_idx(["time_spent", "time", "duration"], cols_time, 0)
+    ok("12.07 'time_spent' hint resolves to 'time_spent' column",
+       cols_time[_r] == "time_spent",
+       f"got {cols_time[_r]!r}")
+
+except ImportError as e:
+    ok("12.XX _best_idx import", False, str(e))
+except Exception as e:
+    ok("12.XX _best_idx unexpected error", False, str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 13.  load_and_clean_csv — EDGE CASES
+# ══════════════════════════════════════════════════════════════════════════════
+section("13. load_and_clean_csv EDGE CASES")
+
+import io as _io
+from ui.dashboard import load_and_clean_csv as _lc
+
+def _make_csv(header, rows):
+    lines = [header] + rows
+    return _io.BytesIO("\n".join(lines).encode())
+
+# 13.01  Self-loop data loads fine (next==current handled by UI layer)
+_self_loop_csv = _make_csv(
+    "entity_id,current_stage,next_stage,time_spent",
+    ["A,Stage1,Stage1,3", "B,Stage2,Stage3,2"],
+)
+try:
+    _df13a = _lc(_self_loop_csv)
+    ok("13.01 self-loop CSV returns DataFrame",
+       _df13a is not None and len(_df13a) >= 1,
+       f"df={_df13a}")
+except Exception as e:
+    ok("13.01 self-loop CSV no crash", False, str(e))
+
+# 13.02  Confidence >100 values still load (flagged by UI, not dropped)
+_conf_over_csv = _make_csv(
+    "entity_id,current_stage,next_stage,confidence",
+    ["A,S1,S2,150", "B,S1,S3,0.8", "C,S2,S3,90"],
+)
+try:
+    _df13b = _lc(_conf_over_csv)
+    ok("13.02 confidence>100 CSV returns DataFrame",
+       _df13b is not None and len(_df13b) == 3,
+       f"rows={None if _df13b is None else len(_df13b)}")
+except Exception as e:
+    ok("13.02 confidence>100 no crash", False, str(e))
+
+# 13.03  All-string time column does not raise (UI warns, not crashes)
+_str_time_csv = _make_csv(
+    "entity_id,current_stage,next_stage,time_spent",
+    ["A,S1,S2,three", "B,S1,S3,five", "C,S2,S3,two"],
+)
+try:
+    _df13c = _lc(_str_time_csv)
+    ok("13.03 all-string time column: no crash",
+       _df13c is not None,
+       f"df={_df13c}")
+except Exception as e:
+    ok("13.03 all-string time column no crash", False, str(e))
+
+# 13.04  NaN in stage column — row with empty current_stage is blank → dropped
+_nan_stage_csv = _make_csv(
+    "entity_id,current_stage,next_stage,time_spent",
+    ["A,S1,S2,2", "B,,S3,1", "C,S2,S3,3"],
+)
+try:
+    _df13d = _lc(_nan_stage_csv)
+    # Row B has empty current_stage — it's NOT all-NaN so may survive as-is
+    ok("13.04 NaN stage row CSV loads without crash",
+       _df13d is not None and len(_df13d) >= 1,
+       f"rows={None if _df13d is None else len(_df13d)}")
+except Exception as e:
+    ok("13.04 NaN stage CSV no crash", False, str(e))
+
+# 13.05  Jira metadata rows before real header are stripped
+_jira_csv = _make_csv(
+    'Report generated on 2025-01-15',
+    [
+        "entity_id,current_stage,next_stage,time_spent",
+        "A,S1,S2,2",
+        "B,S1,S3,3",
+    ],
+)
+try:
+    _df13e = _lc(_jira_csv)
+    ok("13.05 Jira metadata stripped: header detected correctly",
+       _df13e is not None and "entity_id" in _df13e.columns,
+       f"cols={None if _df13e is None else list(_df13e.columns)}")
+except Exception as e:
+    ok("13.05 Jira metadata no crash", False, str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # FINAL REPORT
 # ══════════════════════════════════════════════════════════════════════════════
 section("FINAL REPORT")
