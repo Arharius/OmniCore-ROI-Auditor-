@@ -91,6 +91,15 @@ def build_markov_graph(df: pd.DataFrame) -> MarkovGraphResult:
     if df is None or len(df) == 0:
         raise ValueError("Empty DataFrame passed to build_markov_graph")
 
+    # ── 0. Drop rows with NaN / empty stage names ───────────────────────────
+    df = df.dropna(subset=["current_stage", "next_stage"])
+    df = df[df["current_stage"].astype(str).str.strip() != ""]
+    df = df[df["next_stage"].astype(str).str.strip() != ""]
+    df = df[df["current_stage"].astype(str).str.lower() != "nan"]
+    df = df[df["next_stage"].astype(str).str.lower() != "nan"]
+    if len(df) == 0:
+        raise ValueError("No valid rows after dropping NaN/empty stage values")
+
     # ── 1. Raw transition counts ────────────────────────────────────────────
     tc = (
         df.groupby(["current_stage", "next_stage"])
@@ -144,7 +153,10 @@ def build_markov_graph(df: pd.DataFrame) -> MarkovGraphResult:
     rework_rate: Dict[str, float] = {}
     decision_latency: Dict[str, float] = {}
 
-    all_stages = set(df["current_stage"].unique()) | set(df["next_stage"].unique())
+    all_stages = (
+        {s for s in df["current_stage"].unique() if isinstance(s, str) and s.strip()}
+        | {s for s in df["next_stage"].unique() if isinstance(s, str) and s.strip()}
+    )
     for stage in all_stages:
         out_edges = [(frm, to) for frm, to in existing if frm == stage]
         rework_out = [(frm, to) for frm, to in out_edges if (frm, to) in rework_edges]
