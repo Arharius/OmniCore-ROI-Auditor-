@@ -15,23 +15,49 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-from core.session_cookie import get_cookie_manager, restore_session, clear_auth_cookie
-_cookie_mgr = get_cookie_manager()
-restore_session(_cookie_mgr)
+# ── Cookie-based session restore ────────────────────────────────────────────
+# CookieManager is expensive (React round-trip). Create it ONLY when needed:
+#   • user is NOT authenticated and NOT in demo mode  → check saved cookie
+#   • deferred cookie SET after first login           → _auth_token_pending
+# On every authenticated dashboard render we skip the cookie machinery entirely.
 
-authenticated = st.session_state.get("authenticated")
-demo_only     = st.session_state.get("demo_only")
+_authenticated = st.session_state.get("authenticated")
+_demo_only     = st.session_state.get("demo_only")
+_pending_token = st.session_state.get("_auth_token_pending")
 
-if not authenticated and not demo_only:
+_cookie_mgr = None
+
+if not _authenticated and not _demo_only:
+    from core.session_cookie import get_cookie_manager, restore_session
+    _cookie_mgr = get_cookie_manager()
+    restore_session(_cookie_mgr)
+    _authenticated = st.session_state.get("authenticated")
+    _demo_only     = st.session_state.get("demo_only")
+
+elif _pending_token:
+    # First dashboard render after login — set the cookie silently
+    from core.session_cookie import get_cookie_manager, COOKIE_NAME
+    from datetime import datetime, timedelta, timezone
+    _cookie_mgr = get_cookie_manager()
+    try:
+        _exp = datetime.now(timezone.utc) + timedelta(days=7)
+        _cookie_mgr.set(COOKIE_NAME, _pending_token, expires_at=_exp,
+                        key="set_deferred_auth")
+    except Exception:
+        pass
+    st.session_state.pop("_auth_token_pending", None)
+
+# ── Auth gate ────────────────────────────────────────────────────────────────
+if not _authenticated and not _demo_only:
     from ui.landing import show_landing
-    show_landing(_cookie_mgr)
+    show_landing()
     st.stop()
 
 auth_user = st.session_state.get("auth_user", {})
 is_admin  = auth_user.get("role") == "superadmin"
 
 with st.sidebar:
-    if demo_only and not authenticated:
+    if _demo_only and not _authenticated:
         st.markdown("""
 <div style="
     background:#1D1D1F;
@@ -60,7 +86,10 @@ with st.sidebar:
         )
         if col_out.button("↩", key="nav_logout", help="Sign out",
                           use_container_width=True):
-            clear_auth_cookie(_cookie_mgr)
+            # Create cm only on logout to clear the auth cookie
+            from core.session_cookie import get_cookie_manager, clear_auth_cookie
+            _cm_out = get_cookie_manager()
+            clear_auth_cookie(_cm_out)
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
