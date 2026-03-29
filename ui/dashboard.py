@@ -1019,28 +1019,43 @@ def run_dashboard():
                 _cols = list(_raw_df.columns)
 
                 # ── Smart auto-detect default columns ─────────────────────────
+                import re as _re
                 def _best_idx(hints: list, cols: list) -> int:
+                    """
+                    Match hint against column names, whole-word first, substring second.
+                    Short hints (len<=2) require whole-word boundary to avoid false positives
+                    like 'id' matching 'confidence'.
+                    """
+                    cols_lower = [c.lower() for c in cols]
+                    # Pass 1: whole-word / exact boundary match
                     for h in hints:
-                        for i, c in enumerate(cols):
-                            if h.lower() in c.lower():
+                        pat = r'(?<![a-z])' + _re.escape(h.lower()) + r'(?![a-z])'
+                        for i, cl in enumerate(cols_lower):
+                            if _re.search(pat, cl):
                                 return i
+                    # Pass 2: loose substring match (only for hints len >= 4)
+                    for h in hints:
+                        if len(h) >= 4:
+                            for i, cl in enumerate(cols_lower):
+                                if h.lower() in cl:
+                                    return i
                     return 0
 
                 st.session_state.setdefault(
                     "_etl_idx_entity",
-                    _best_idx(["entity_id","id","deal","task","project","client"], _cols),
+                    _best_idx(["entity_id","deal","task","project","client","id"], _cols),
                 )
                 st.session_state.setdefault(
                     "_etl_idx_current",
-                    _best_idx(["current","from","stage","phase","status","cur"], _cols),
+                    _best_idx(["current_stage","current","stage","phase","status","from"], _cols),
                 )
                 st.session_state.setdefault(
                     "_etl_idx_next",
-                    _best_idx(["next","to","target","dest"], _cols),
+                    _best_idx(["next_stage","next","target","dest","to"], _cols),
                 )
                 st.session_state.setdefault(
                     "_etl_idx_time",
-                    _best_idx(["time","days","duration","spent","hours"], _cols),
+                    _best_idx(["time_spent","duration","days","hours","spent","time"], _cols),
                 )
 
                 # ── 4 side-by-side selectboxes for column mapping ─────────────
@@ -1066,6 +1081,51 @@ def run_dashboard():
                     key="_etl_sel_time",
                 )
 
+                # ── Mapping quality warnings ──────────────────────────────────
+                _map_warns = []
+                if col_next == col_current:
+                    _map_warns.append({
+                        "en": f"⚠ **next_stage** maps to the same column as **current_stage** (`{col_current}`). "
+                              "The Markov graph will contain only self-loops — "
+                              "select a different column for «Next stage».",
+                        "ru": f"⚠ **Следующая стадия** указывает на тот же столбец, что и **Текущая стадия** (`{col_current}`). "
+                              "Граф Маркова будет содержать только петли — "
+                              "выберите другой столбец для «Следующая стадия».",
+                    })
+                # Warn if time column is non-numeric
+                _time_num_frac = (
+                    pd.to_numeric(_raw_df[col_time], errors="coerce").notna().mean()
+                    if col_time in _raw_df.columns else 0.0
+                )
+                if _time_num_frac < 0.5:
+                    _map_warns.append({
+                        "en": f"⚠ Column `{col_time}` is <50 % numeric — durations will default to 0. "
+                              "Select a numeric column for «Time spent».",
+                        "ru": f"⚠ Столбец `{col_time}` менее чем на 50 % числовой — длительности будут 0. "
+                              "Выберите числовой столбец для «Время».",
+                    })
+                # Confidence column anomalies (purely informational)
+                for _conf_col in [c for c in _cols if "confid" in c.lower()]:
+                    _cv = pd.to_numeric(_raw_df[_conf_col], errors="coerce").dropna()
+                    if len(_cv) == 0:
+                        continue
+                    _cv_issues = []
+                    _n_high = int((_cv > 100).sum())
+                    _n_neg  = int((_cv < 0).sum())
+                    _n_dec  = int(((_cv > 0) & (_cv < 1)).sum())
+                    _n_zero = int((_cv == 0).sum())
+                    if _n_high:  _cv_issues.append(f"{_n_high} value(s) > 100 %")
+                    if _n_neg:   _cv_issues.append(f"{_n_neg} negative value(s)")
+                    if _n_dec:   _cv_issues.append(f"{_n_dec} decimal value(s) in (0,1) — likely a fraction, not a %")
+                    if _n_zero:  _cv_issues.append(f"{_n_zero} zero value(s)")
+                    if _cv_issues:
+                        _map_warns.append({
+                            "en": f"ℹ Column `{_conf_col}` has data quality issues: {', '.join(_cv_issues)}.",
+                            "ru": f"ℹ Столбец `{_conf_col}` содержит проблемы с данными: {', '.join(_cv_issues)}.",
+                        })
+                for _w in _map_warns:
+                    st.warning(_w.get(lang, _w.get("en", "")))
+
                 # ── Normalize: rename mapped columns to internal standard names ─
                 _mapped = _raw_df[[col_entity, col_current,
                                    col_next, col_time]].copy()
@@ -1076,6 +1136,17 @@ def run_dashboard():
                 )
                 _mapped["entity_id"] = _mapped["entity_id"].astype(str).str.strip()
                 _mapped = _mapped[_mapped["time_spent"] >= 0].reset_index(drop=True)
+
+                # ── NaN stage warning ─────────────────────────────────────────
+                _nan_cur = _mapped["current_stage"].isna().sum()
+                _nan_nxt = _mapped["next_stage"].isna().sum()
+                _nan_total = max(_nan_cur, _nan_nxt)
+                if _nan_total > 0:
+                    _nan_msg = {
+                        "en": f"ℹ {_nan_total} row(s) contain null/N/A stage values and will be excluded from the Markov graph.",
+                        "ru": f"ℹ {_nan_total} строк(а) содержат пустые значения стадий (null/N/A) — они будут исключены из графа Маркова.",
+                    }
+                    st.info(_nan_msg.get(lang, _nan_msg["en"]))
 
                 # ── Persist to session_state for the compute block above ───────
                 st.session_state["mapped_df"]   = _mapped
