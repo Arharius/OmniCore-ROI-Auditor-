@@ -133,6 +133,31 @@ def load_and_clean_csv(uploaded_file) -> "pd.DataFrame | None":
 load_cleaned_csv = load_and_clean_csv
 
 
+# ── Smart column-name matcher (used in ETL block and exported for tests) ──────
+import re as _re_best
+
+def _best_idx(hints: list, cols: list, default: int = 0) -> int:
+    """
+    Match hint keywords against CSV column names.
+
+    Pass 1 — whole-word / boundary match (avoids "id" matching "confidence").
+    Pass 2 — substring match for hints of length ≥ 4.
+    Returns *default* when nothing matches.
+    """
+    cols_lower = [c.lower() for c in cols]
+    for h in hints:
+        pat = r'(?<![a-z])' + _re_best.escape(h.lower()) + r'(?![a-z])'
+        for i, cl in enumerate(cols_lower):
+            if _re_best.search(pat, cl):
+                return i
+    for h in hints:
+        if len(h) >= 4:
+            for i, cl in enumerate(cols_lower):
+                if h.lower() in cl:
+                    return i
+    return default
+
+
 # ── Cached Monte Carlo (Sprint 3) ──────────────────────────────────────────────
 @st.cache_data(show_spinner=False, ttl=300)
 def _cached_mc(
@@ -1019,28 +1044,7 @@ def run_dashboard():
                 _cols = list(_raw_df.columns)
 
                 # ── Smart auto-detect default columns ─────────────────────────
-                import re as _re
-                def _best_idx(hints: list, cols: list) -> int:
-                    """
-                    Match hint against column names, whole-word first, substring second.
-                    Short hints (len<=2) require whole-word boundary to avoid false positives
-                    like 'id' matching 'confidence'.
-                    """
-                    cols_lower = [c.lower() for c in cols]
-                    # Pass 1: whole-word / exact boundary match
-                    for h in hints:
-                        pat = r'(?<![a-z])' + _re.escape(h.lower()) + r'(?![a-z])'
-                        for i, cl in enumerate(cols_lower):
-                            if _re.search(pat, cl):
-                                return i
-                    # Pass 2: loose substring match (only for hints len >= 4)
-                    for h in hints:
-                        if len(h) >= 4:
-                            for i, cl in enumerate(cols_lower):
-                                if h.lower() in cl:
-                                    return i
-                    return 0
-
+                # _best_idx is defined at module level (importable for tests)
                 st.session_state.setdefault(
                     "_etl_idx_entity",
                     _best_idx(["entity_id","deal","task","project","client","id"], _cols),
@@ -1182,7 +1186,7 @@ def run_dashboard():
 
                 # ── Collapsible data preview ───────────────────────────────────
                 with st.expander(f"📋 {_el['preview']} ({_n_row:,} rows)", expanded=False):
-                    st.dataframe(_mapped.head(30), use_container_width=True)
+                    st.dataframe(_mapped.head(30), width="stretch")
 
         elif st.session_state.get("mapped_df") is None:
             # No file and no cached data — show upload prompt
