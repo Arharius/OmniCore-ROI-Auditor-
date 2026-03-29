@@ -788,6 +788,7 @@ def run_dashboard():
         positive_signals=int(pos_signals),
         total_signals=int(tot_signals),
         pipeline_utilization_pct=float(pipeline_util),
+        prior_rate_pct=float(st.session_state.get("bayes_prior_pct", 34)),
     )
 
     _bayes_prior_rate = st.session_state.get("bayes_prior_pct", 34) / 100.0
@@ -2078,8 +2079,43 @@ def run_dashboard():
         bc1.metric(t(lang, "prior"),     "{:.1f}%".format(bayes_live.prior_pct))
         bc2.metric(t(lang, "posterior"), "{:.1f}%".format(bayes_live.posterior_pct))
         bc3.metric(t(lang, "ci_80"), "{}% – {}%".format(bayes_live.ci_80_low, bayes_live.ci_80_high))
+
+        # ── Step-by-step formula breakdown ──────────────────────────────────
         prior_a  = _bpr * 10; prior_b  = (1 - _bpr) * 10
         post_a   = prior_a + pos_signals; post_b   = prior_b + (tot_signals - pos_signals)
+        _neg_signals = tot_signals - pos_signals
+        _formula_label = {"en": "Formula derivation (Beta-Binomial, n_prior = 10)",
+                          "ru": "Разбор формулы (Beta-Binomial, n_prior = 10)",
+                          "sr": "Izvod formule (Beta-Binomial, n_prior = 10)"}.get(lang, "Formula derivation")
+        with st.expander(_formula_label, expanded=False):
+            _step_en = (
+                f"**Prior:** µ₀ = {bayes_prior_pct}%  →  "
+                f"α₀ = {bayes_prior_pct/100:.2f} × 10 = **{prior_a:.1f}**,  "
+                f"β₀ = {1-bayes_prior_pct/100:.2f} × 10 = **{prior_b:.1f}**\n\n"
+                f"**Evidence:** {pos_signals} positive / {tot_signals} total  "
+                f"({_neg_signals} negative)\n\n"
+                f"**Update:** α_n = {prior_a:.1f} + {pos_signals} = **{post_a:.1f}**  |  "
+                f"β_n = {prior_b:.1f} + {_neg_signals} = **{post_b:.1f}**\n\n"
+                f"**Posterior mean:** E[Beta(α_n, β_n)] = α_n / (α_n + β_n) = "
+                f"{post_a:.1f} / ({post_a:.1f} + {post_b:.1f}) = "
+                f"**{post_a/(post_a+post_b)*100:.1f}%**\n\n"
+                f"*n_prior = 10 → the prior belief carries the same weight as 10 historical observations.*"
+            )
+            _step_ru = (
+                f"**Априор:** µ₀ = {bayes_prior_pct}%  →  "
+                f"α₀ = {bayes_prior_pct/100:.2f} × 10 = **{prior_a:.1f}**,  "
+                f"β₀ = {1-bayes_prior_pct/100:.2f} × 10 = **{prior_b:.1f}**\n\n"
+                f"**Данные:** {pos_signals} положит. / {tot_signals} всего  "
+                f"({_neg_signals} отриц.)\n\n"
+                f"**Обновление:** α_n = {prior_a:.1f} + {pos_signals} = **{post_a:.1f}**  |  "
+                f"β_n = {prior_b:.1f} + {_neg_signals} = **{post_b:.1f}**\n\n"
+                f"**Апостериор:** E[Beta(α_n, β_n)] = α_n / (α_n + β_n) = "
+                f"{post_a:.1f} / ({post_a:.1f} + {post_b:.1f}) = "
+                f"**{post_a/(post_a+post_b)*100:.1f}%**\n\n"
+                f"*n_prior = 10 — априорное убеждение имеет вес 10 исторических наблюдений.*"
+            )
+            _step_sr = _step_en
+            st.markdown({"en": _step_en, "ru": _step_ru, "sr": _step_sr}.get(lang, _step_en))
         x        = np.linspace(0.01, 0.99, 300)
         y_prior  = stats.beta.pdf(x, prior_a, prior_b)
         y_post   = stats.beta.pdf(x, post_a,  post_b)
